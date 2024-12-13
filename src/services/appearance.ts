@@ -44,13 +44,35 @@ export async function getStoreAppearance(storeId: string): Promise<StoreAppearan
       .from('store_appearance')
       .select('*')
       .eq('store_id', storeId)
-      .single();
+      .maybeSingle();
 
-    if (error) throw error;
-    return data;
+    if (error) {
+      console.error('Error fetching store appearance:', error);
+      return {
+        store_id: storeId,
+        logo_url: null,
+        banner_url: null,
+        primary_color: '#4F46E5',
+        secondary_color: '#10B981'
+      };
+    }
+    
+    return data || {
+      store_id: storeId,
+      logo_url: null,
+      banner_url: null,
+      primary_color: '#4F46E5',
+      secondary_color: '#10B981'
+    };
   } catch (error) {
     console.error('Error fetching store appearance:', error);
-    return null;
+    return {
+      store_id: storeId,
+      logo_url: null,
+      banner_url: null,
+      primary_color: '#4F46E5',
+      secondary_color: '#10B981'
+    };
   }
 }
 

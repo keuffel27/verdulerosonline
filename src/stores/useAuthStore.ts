@@ -25,7 +25,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       set({ loading: true, error: null });
       
-      // Primero intentamos el login
+      // Intentamos el login
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -41,97 +41,18 @@ export const useAuthStore = create<AuthState>((set) => ({
         return false;
       }
 
-      // Luego verificamos si existe la tienda
-      const { data: storeData, error: storeError } = await supabase
-        .from('stores')
-        .select('id, name, slug')
-        .eq('owner_email', email)
-        .single();
-
-      if (storeError) {
-        // Si no existe la tienda, la creamos
-        const storeName = email.split('@')[0];
-        const storeSlug = storeName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-        const storeId = `store_${Date.now()}`;
-
-        // Crear la tienda
-        const { error: createStoreError } = await supabase
-          .from('stores')
-          .insert([
-            {
-              id: storeId,
-              name: storeName,
-              slug: storeSlug,
-              owner_id: authData.user.id,
-              owner_name: storeName,
-              owner_email: email,
-              description: `Tienda de ${storeName}`,
-              trial_start_date: new Date().toISOString(),
-              subscription_status: 'trial',
-              status: 'active'
-            }
-          ]);
-
-        if (createStoreError) {
-          set({ error: 'Error al crear la tienda', loading: false });
-          return false;
-        }
-
-        // Crear la configuración de apariencia
-        await supabase
-          .from('store_appearance')
-          .insert([
-            {
-              store_id: storeId,
-              primary_color: '#3B82F6',
-              secondary_color: '#1D4ED8'
-            }
-          ]);
-
-        // Crear el horario por defecto
-        await supabase
-          .from('store_schedule')
-          .insert([
-            {
-              store_id: storeId
-            }
-          ]);
-
-        // Crear categoría por defecto
-        await supabase
-          .from('store_categories')
-          .insert([
-            {
-              store_id: storeId,
-              name: 'General',
-              description: 'Categoría general',
-              order_index: 1
-            }
-          ]);
-
-        set({ 
-          user: authData.user, 
-          storeId: storeId,
-          loading: false, 
-          error: null 
-        });
-        
-        return true;
-      }
-
-      // Si la tienda existe, usamos sus datos
+      // Actualizamos el estado
       set({ 
-        user: authData.user, 
-        storeId: storeData.id,
-        loading: false, 
-        error: null 
-      });
-      
-      return true;
-    } catch (err) {
-      set({
-        error: err instanceof Error ? err.message : 'Error al iniciar sesión',
+        user: authData.user,
         loading: false,
+        error: null
+      });
+
+      return true;
+    } catch (error) {
+      set({ 
+        error: error instanceof Error ? error.message : 'Error desconocido',
+        loading: false 
       });
       return false;
     }

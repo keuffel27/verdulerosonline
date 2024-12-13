@@ -36,18 +36,6 @@ export interface Store {
   trial_start_date: string;
   created_at?: string;
   updated_at?: string;
-  store_social_media?: {
-    instagram_url?: string;
-    facebook_url?: string;
-    whatsapp_number?: string;
-    whatsapp_message?: string;
-  };
-  store_appearance?: {
-    logo_url?: string;
-    banner_url?: string;
-    primary_color?: string;
-    secondary_color?: string;
-  };
 }
 
 export interface StoreConfig {
@@ -55,16 +43,6 @@ export interface StoreConfig {
   logo?: string;
   background?: string;
   schedule: WeekSchedule;
-  social: {
-    whatsapp?: string;
-    instagram?: string;
-    facebook?: string;
-  };
-  whatsappMessage: {
-    header: string;
-    footer: string;
-    itemTemplate: string;
-  };
   delivery: {
     available: boolean;
     minAmount: number;

@@ -1,8 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { toast } from 'react-toastify';
+import { Loader2 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
+import type { Database } from '../../../lib/database.types';
 import { ProductCard } from './ProductCard';
-import { Product } from '../../../types/supabase';
 import { useCart } from '../../../hooks/useCart';
+
+type Product = Database['public']['Tables']['store_products']['Row'];
+type Category = Database['public']['Tables']['store_categories']['Row'];
 
 interface Props {
   storeId: string;
@@ -10,11 +15,10 @@ interface Props {
 
 export const ProductList: React.FC<Props> = ({ storeId }) => {
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { addToCart } = useCart();
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -29,37 +33,22 @@ export const ProductList: React.FC<Props> = ({ storeId }) => {
         if (categoriesError) throw categoriesError;
         setCategories(categoriesData || []);
 
-        // Fetch products with their presentations
+        // Fetch products
         const { data: productsData, error: productsError } = await supabase
           .from('store_products')
           .select(`
             *,
-            store_product_presentations (
-              id,
-              weight_in_grams,
-              price
-            )
+            category:store_categories(*)
           `)
           .eq('store_id', storeId)
-          .order('name');
+          .eq('status', 'active')
+          .order('order_index');
 
         if (productsError) throw productsError;
-
-        // Transform the data to match our type
-        const transformedProducts = productsData.map((product: Product) => ({
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          description: product.description,
-          image_url: product.image_url,
-          category_id: product.category_id,
-          is_available: product.is_available,
-          presentations: product.store_product_presentations || []
-        }));
-
-        setProducts(transformedProducts);
+        setProducts(productsData || []);
       } catch (error) {
         console.error('Error fetching data:', error);
+        toast.error('Error al cargar los productos');
       } finally {
         setLoading(false);
       }
@@ -69,7 +58,7 @@ export const ProductList: React.FC<Props> = ({ storeId }) => {
 
     // Set up real-time subscriptions
     const productsSubscription = supabase
-      .channel('products_changes')
+      .channel('store_products_changes')
       .on(
         'postgres_changes',
         {
@@ -84,24 +73,8 @@ export const ProductList: React.FC<Props> = ({ storeId }) => {
       )
       .subscribe();
 
-    const presentationsSubscription = supabase
-      .channel('presentations_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'store_product_presentations'
-        },
-        () => {
-          fetchData();
-        }
-      )
-      .subscribe();
-
     return () => {
       productsSubscription.unsubscribe();
-      presentationsSubscription.unsubscribe();
     };
   }, [storeId]);
 
@@ -112,7 +85,7 @@ export const ProductList: React.FC<Props> = ({ storeId }) => {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
       </div>
     );
   }
@@ -125,7 +98,7 @@ export const ProductList: React.FC<Props> = ({ storeId }) => {
           onClick={() => setSelectedCategory(null)}
           className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
             selectedCategory === null
-              ? 'bg-blue-600 text-white'
+              ? 'bg-green-600 text-white'
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
@@ -137,7 +110,7 @@ export const ProductList: React.FC<Props> = ({ storeId }) => {
             onClick={() => setSelectedCategory(category.id)}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               selectedCategory === category.id
-                ? 'bg-blue-600 text-white'
+                ? 'bg-green-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -152,7 +125,6 @@ export const ProductList: React.FC<Props> = ({ storeId }) => {
           <ProductCard
             key={product.id}
             product={product}
-            onSelect={() => setSelectedProduct(product)}
             onAddToCart={(quantity) => addToCart(product, quantity)}
           />
         ))}

@@ -6,7 +6,6 @@ import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 import { Home } from 'lucide-react';
 import { StoreScheduleEditor } from '../../components/store/schedule/StoreScheduleEditor';
-import { WhatsAppManager } from '../../components/store/whatsapp/WhatsAppManager';
 
 type Store = Database['public']['Tables']['stores']['Row'];
 
@@ -80,10 +79,6 @@ export const StoreAdmin: React.FC = () => {
 
         <div className="bg-white p-6 rounded-lg shadow">
           <StoreScheduleEditor storeId={storeId} />
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow">
-          <WhatsAppManager storeId={storeId} />
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow">

@@ -33,37 +33,64 @@ export const Register: React.FC = () => {
     setIsLoading(true);
     try {
       // 1. Registrar el usuario en Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { data: { user }, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
       });
 
-      if (authError) throw authError;
+      if (signUpError) {
+        console.error('Error en signup:', signUpError);
+        throw new Error('Error al crear el usuario: ' + signUpError.message);
+      }
 
-      if (!authData.user) {
+      if (!user) {
         throw new Error('No se pudo crear el usuario');
       }
 
-      // 2. Crear el registro en la tabla stores
+      // 2. Iniciar sesión inmediatamente después del registro
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (signInError) {
+        console.error('Error en signin:', signInError);
+        throw new Error('Error al iniciar sesión: ' + signInError.message);
+      }
+
+      // 3. Crear el registro en la tabla stores
+      const storeSlug = formData.storeName.toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
       const { error: storeError } = await supabase
         .from('stores')
         .insert([
           {
-            user_id: authData.user.id,
             name: formData.storeName,
-            description: null,
-            address: null,
-            phone: null,
-            email: formData.email,
-            welcome_message: '¡Bienvenido a mi tienda!',
-            auto_reply: true,
-            business_hours: true,
-            is_connected: false
+            slug: storeSlug,
+            owner_id: user.id,
+            owner_name: formData.ownerName,
+            owner_email: formData.email,
+            subscription_status: 'trial',
+            status: 'active',
+            trial_start_date: new Date().toISOString(),
+            country: 'Argentina',
+            currency: 'ARS',
+            timezone: 'America/Argentina/Buenos_Aires'
           }
         ]);
 
-      if (storeError) throw storeError;
+      if (storeError) {
+        console.error('Error al crear tienda:', storeError);
+        // Intentar eliminar el usuario creado para mantener consistencia
+        await supabase.auth.admin.deleteUser(user.id);
+        throw new Error('Error al crear la tienda: ' + storeError.message);
+      }
 
+      // 4. Cerrar sesión y redirigir al login
+      await supabase.auth.signOut();
+      
       toast.success('¡Registro exitoso! Por favor, inicia sesión para continuar.');
       navigate('/auth/login');
       
@@ -107,6 +134,7 @@ export const Register: React.FC = () => {
                 value={formData.storeName}
                 onChange={handleChange}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                placeholder="Ej: Mi Tienda Online"
               />
             </div>
 
@@ -122,6 +150,7 @@ export const Register: React.FC = () => {
                 value={formData.ownerName}
                 onChange={handleChange}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                placeholder="Tu nombre completo"
               />
             </div>
 
@@ -137,6 +166,7 @@ export const Register: React.FC = () => {
                 value={formData.email}
                 onChange={handleChange}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                placeholder="tu@email.com"
               />
             </div>
 
@@ -152,6 +182,8 @@ export const Register: React.FC = () => {
                 value={formData.password}
                 onChange={handleChange}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                placeholder="••••••••"
+                minLength={6}
               />
             </div>
 
@@ -167,6 +199,8 @@ export const Register: React.FC = () => {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                placeholder="••••••••"
+                minLength={6}
               />
             </div>
 
@@ -183,3 +217,5 @@ export const Register: React.FC = () => {
     </div>
   );
 };
+
+export default Register;

@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Instagram, Facebook, MessageCircle } from 'lucide-react';
+import { Instagram, Facebook } from 'lucide-react';
 
 export default function StoreSocialMedia() {
   const { storeId } = useParams();
   const [socialLinks, setSocialLinks] = useState({
     instagram: '',
     facebook: '',
-    whatsapp: '',
-    whatsappMessage: '¡Hola! Me gustaría hacer un pedido.',
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -75,57 +73,6 @@ export default function StoreSocialMedia() {
                       setSocialLinks({ ...socialLinks, facebook: e.target.value })
                     }
                   />
-                </div>
-              </div>
-
-              {/* WhatsApp */}
-              <div>
-                <label
-                  htmlFor="whatsapp"
-                  className="flex items-center text-sm font-medium text-gray-700"
-                >
-                  <MessageCircle className="h-5 w-5 mr-2 text-green-500" />
-                  WhatsApp
-                </label>
-                <div className="mt-1">
-                  <input
-                    type="text"
-                    name="whatsapp"
-                    id="whatsapp"
-                    className="shadow-sm focus:ring-green-500 focus:border-green-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                    placeholder="+54 9 11 1234-5678"
-                    value={socialLinks.whatsapp}
-                    onChange={(e) =>
-                      setSocialLinks({ ...socialLinks, whatsapp: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="mt-4">
-                  <label
-                    htmlFor="whatsappMessage"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Mensaje predeterminado
-                  </label>
-                  <div className="mt-1">
-                    <textarea
-                      id="whatsappMessage"
-                      name="whatsappMessage"
-                      rows={3}
-                      className="shadow-sm focus:ring-green-500 focus:border-green-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                      value={socialLinks.whatsappMessage}
-                      onChange={(e) =>
-                        setSocialLinks({
-                          ...socialLinks,
-                          whatsappMessage: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <p className="mt-2 text-sm text-gray-500">
-                    Este mensaje se usará como plantilla cuando los clientes te contacten
-                    por WhatsApp.
-                  </p>
                 </div>
               </div>
 
