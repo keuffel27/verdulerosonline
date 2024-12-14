@@ -159,69 +159,26 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (error) throw error;
       
       if (session?.user) {
-        // Si hay sesión, obtenemos el storeId
-        const { data: storeData, error: storeError } = await supabase
-          .from('stores')
-          .select('id')
-          .eq('owner_email', session.user.email)
-          .single();
-
-        if (storeError) {
-          // Si no existe la tienda, la creamos
-          const storeName = session.user.email.split('@')[0];
-          const storeSlug = storeName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-          const storeId = `store_${Date.now()}`;
-
-          const { error: createError } = await supabase
-            .from('stores')
-            .insert([
-              {
-                id: storeId,
-                name: storeName,
-                slug: storeSlug,
-                owner_id: session.user.id,
-                owner_name: storeName,
-                owner_email: session.user.email,
-                trial_start_date: new Date().toISOString(),
-                subscription_status: 'trial',
-                status: 'active'
-              }
-            ]);
-
-          if (createError) {
-            set({ 
-              error: 'Error al crear la tienda', 
-              loading: false,
-              user: null,
-              storeId: null 
-            });
-            return;
-          }
-
-          set({ 
-            user: session.user,
-            storeId: storeId,
-            loading: false,
-            error: null 
-          });
-          return;
-        }
-          
         set({ 
           user: session.user,
-          storeId: storeData.id,
+          loading: false,
+          error: null
+        });
+      } else {
+        set({ 
+          user: null, 
+          storeId: null,
           loading: false,
           error: null 
         });
-      } else {
-        set({ user: null, storeId: null, loading: false, error: null });
       }
-    } catch (err) {
-      set({
-        error: err instanceof Error ? err.message : 'Error al verificar la autenticación',
-        loading: false,
-        user: null,
+    } catch (error) {
+      console.error('Error checking auth:', error);
+      set({ 
+        user: null, 
         storeId: null,
+        loading: false,
+        error: error instanceof Error ? error.message : 'Error al verificar la autenticación'
       });
     }
   },

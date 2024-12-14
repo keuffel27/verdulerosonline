@@ -37,11 +37,19 @@ export const LoginForm: React.FC = () => {
       // Primero verificamos si existe la tienda
       const { data: storeData, error: storeError } = await supabase
         .from('stores')
-        .select('id')
-        .eq('email', data.email)
+        .select('*')  // Seleccionamos todos los campos para ver qué hay
+        .eq('owner_email', data.email)
         .single();
 
-      if (storeError || !storeData) {
+      console.log('Resultado de búsqueda de tienda:', { storeData, storeError });
+
+      if (storeError) {
+        console.error('Error específico al buscar tienda:', storeError);
+        throw new Error('No se encontró la tienda asociada a este email');
+      }
+
+      if (!storeData) {
+        console.error('No se encontraron datos de tienda para:', data.email);
         throw new Error('No se encontró la tienda asociada a este email');
       }
 

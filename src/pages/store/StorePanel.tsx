@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useParams, Link, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { useParams, Link, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import {
   Store,
   Settings,
@@ -12,185 +13,306 @@ import {
   EyeOff,
   Copy,
   ExternalLink,
+  Check,
+  Menu,
+  X as XIcon,
+  ChevronLeft,
 } from 'lucide-react';
-import { toast } from 'react-toastify';
 import { BackButton } from '../../components/ui/BackButton';
 import { StorePreview } from '../../components/store/StorePreview';
 
 // Componentes de las diferentes secciones
-const StoreAppearance = React.lazy(() => import('./panels/StoreAppearance'));
-const StoreSocialMedia = React.lazy(() => import('./panels/StoreSocialMedia'));
-const StoreSchedule = React.lazy(() => import('./panels/StoreSchedule'));
-const StoreCategories = React.lazy(() => import('./panels/StoreCategories'));
-const StoreProducts = React.lazy(() => import('./panels/StoreProducts'));
-const StoreSettings = React.lazy(() => import('./panels/StoreSettings'));
+import StoreAppearance from './panels/StoreAppearance';
+import StoreSocialMedia from './panels/StoreSocialMedia';
+import StoreSchedule from './panels/StoreSchedule';
+import StoreCategories from './panels/StoreCategories';
+import StoreProducts from './panels/StoreProducts';
+import StoreSettings from './panels/StoreSettings';
 
-export const StorePanel: React.FC = () => {
+const StorePanel: React.FC = () => {
   const { storeId } = useParams<{ storeId: string }>();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [previewVisible, setPreviewVisible] = useState(true);
+  const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [previewVisible, setPreviewVisible] = useState(false);
   const [previewExpanded, setPreviewExpanded] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   const storeUrl = `${window.location.origin}/store/${storeId}`;
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(storeUrl);
-    toast.success('¡Enlace copiado al portapapeles!');
-  };
-
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(storeUrl);
+      setIsCopied(true);
+      toast.success('¡URL copiada al portapapeles!');
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (error) {
+      console.error('Error al copiar:', error);
+      toast.error('No se pudo copiar la URL');
+    }
   };
 
   const navigation = [
     {
       name: 'Apariencia',
       icon: Image,
-      href: `appearance`,
+      href: 'appearance',
       description: 'Personaliza el diseño y estilo de tu tienda',
     },
     {
       name: 'Redes Sociales',
       icon: Share2,
-      href: `social`,
+      href: 'social',
       description: 'Configura tus enlaces a redes sociales',
     },
     {
       name: 'Horarios',
       icon: Clock,
-      href: `schedule`,
+      href: 'schedule',
       description: 'Gestiona los horarios de atención',
     },
     {
       name: 'Categorías',
       icon: LayoutGrid,
-      href: `categories`,
+      href: 'categories',
       description: 'Organiza tus productos en categorías',
     },
     {
       name: 'Productos',
       icon: ShoppingBag,
-      href: `products`,
+      href: 'products',
       description: 'Administra tu catálogo de productos',
     },
     {
       name: 'Configuración',
       icon: Settings,
-      href: `settings`,
+      href: 'settings',
       description: 'Configura los ajustes generales de tu tienda',
     },
   ];
 
+  const getCurrentPageName = () => {
+    const currentPath = location.pathname.split('/').pop();
+    const currentPage = navigation.find(item => item.href === currentPath);
+    return currentPage?.name || 'Panel';
+  };
+
   if (!storeId) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/auth/login" replace />;
   }
 
   return (
-    <div className="h-screen flex overflow-hidden bg-gray-100">
-      {/* Sidebar */}
+    <div className="min-h-screen bg-gray-100">
+      {/* Mobile Header */}
+      <div className="lg:hidden bg-white border-b fixed top-0 left-0 right-0 z-20">
+        <div className="flex items-center justify-between h-16 px-4">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <Menu className="h-6 w-6" />
+            </button>
+            <span className="font-semibold text-gray-900">{getCurrentPageName()}</span>
+          </div>
+          <button
+            onClick={() => setPreviewVisible(!previewVisible)}
+            className="p-2 text-gray-500 hover:text-gray-700"
+          >
+            {previewVisible ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Sidebar */}
       <div
-        className={`${
+        className={`fixed inset-0 z-30 lg:hidden ${
           sidebarOpen ? 'block' : 'hidden'
-        } fixed inset-y-0 left-0 w-64 transition duration-300 transform bg-white overflow-y-auto lg:translate-x-0 lg:static lg:inset-0`}
+        }`}
       >
-        <div className="flex items-center justify-between h-16 border-b px-4">
-          <div className="flex items-center">
+        {/* Backdrop */}
+        <div
+          className="fixed inset-0 bg-gray-600 bg-opacity-75"
+          onClick={() => setSidebarOpen(false)}
+        />
+
+        {/* Sidebar */}
+        <div className="fixed inset-y-0 left-0 w-full max-w-xs bg-white">
+          <div className="h-full flex flex-col">
+            {/* Sidebar Header */}
+            <div className="flex items-center justify-between h-16 px-4 border-b">
+              <div className="flex items-center">
+                <Store className="h-8 w-8 text-green-600" />
+                <span className="ml-2 text-lg font-semibold text-gray-800">
+                  Panel de Tienda
+                </span>
+              </div>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <XIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Store URL */}
+            <div className="p-4 border-b">
+              <div className="text-sm text-gray-600 mb-2">URL de tu tienda:</div>
+              <div className="flex items-center space-x-2">
+                <div className="flex-1 truncate bg-gray-50 p-2 rounded text-sm">
+                  {storeUrl}
+                </div>
+                <button
+                  onClick={handleCopyLink}
+                  className="p-2 text-gray-500 hover:text-gray-700"
+                  title="Copiar URL"
+                >
+                  {isCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </button>
+                <a
+                  href={storeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 text-gray-500 hover:text-gray-700"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </div>
+            </div>
+
+            {/* Navigation */}
+            <nav className="flex-1 overflow-y-auto p-4">
+              <div className="space-y-2">
+                {navigation.map((item) => {
+                  const isActive = location.pathname.includes(item.href);
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      onClick={() => setSidebarOpen(false)}
+                      className={`flex items-center px-3 py-3 rounded-lg transition-colors ${
+                        isActive
+                          ? 'bg-green-50 text-green-700'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <item.icon className={`h-5 w-5 ${isActive ? 'text-green-500' : 'text-gray-400'}`} />
+                      <div className="ml-3">
+                        <p className="text-sm font-medium">{item.name}</p>
+                        <p className="text-xs text-gray-500">{item.description}</p>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </nav>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
+        <div className="flex-1 flex flex-col min-h-0 bg-white border-r">
+          <div className="flex items-center h-16 flex-shrink-0 px-4 border-b">
             <Store className="h-8 w-8 text-green-600" />
             <span className="ml-2 text-lg font-semibold text-gray-800">
               Panel de Tienda
             </span>
           </div>
-        </div>
 
-        <nav className="mt-5 px-4">
-          <div className="space-y-1">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                to={item.href}
-                className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+          {/* Store URL */}
+          <div className="p-4 border-b">
+            <div className="text-sm text-gray-600 mb-2">URL de tu tienda:</div>
+            <div className="flex items-center space-x-2">
+              <div className="flex-1 truncate bg-gray-50 p-2 rounded text-sm">
+                {storeUrl}
+              </div>
+              <button
+                onClick={handleCopyLink}
+                className="p-2 text-gray-500 hover:text-gray-700"
+                title="Copiar URL"
               >
-                <item.icon
-                  className="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500"
-                  aria-hidden="true"
-                />
-                {item.name}
-              </Link>
-            ))}
+                {isCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              </button>
+              <a
+                href={storeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 text-gray-500 hover:text-gray-700"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            </div>
           </div>
-        </nav>
+
+          {/* Desktop Navigation */}
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+            {navigation.map((item) => {
+              const isActive = location.pathname.includes(item.href);
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`flex items-center px-3 py-3 rounded-lg transition-colors ${
+                    isActive
+                      ? 'bg-green-50 text-green-700'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <item.icon className={`h-5 w-5 ${isActive ? 'text-green-500' : 'text-gray-400'}`} />
+                  <div className="ml-3">
+                    <p className="text-sm font-medium">{item.name}</p>
+                    <p className="text-xs text-gray-500">{item.description}</p>
+                  </div>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="relative z-10 flex-shrink-0 flex h-16 bg-white border-b border-gray-200">
-          <button
-            onClick={toggleSidebar}
-            className="px-4 border-r border-gray-200 text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-green-500 lg:hidden"
-          >
-            <span className="sr-only">Abrir sidebar</span>
-            <Store className="h-6 w-6" aria-hidden="true" />
-          </button>
-        </div>
-
-        <main className="flex-1 relative overflow-y-auto focus:outline-none">
-          <div className="py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-              <div className="flex justify-between items-center mb-4">
-                <BackButton />
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={() => setPreviewVisible(!previewVisible)}
-                    className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                  >
-                    {previewVisible ? (
-                      <>
-                        <EyeOff className="h-4 w-4 mr-2" />
-                        Ocultar Vista Previa
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="h-4 w-4 mr-2" />
-                        Mostrar Vista Previa
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={handleCopyLink}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                  >
-                    <Copy className="h-4 w-4 mr-2" />
-                    Copiar Link
-                  </button>
-                  <a
-                    href={storeUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Ver Tienda
-                  </a>
-                </div>
-              </div>
-              <div className="flex space-x-4">
-                <div className={`flex-1 ${previewVisible ? 'w-2/3' : 'w-full'}`}>
-                  <Outlet />
-                </div>
-                {previewVisible && (
-                  <div className={`w-1/3 ${previewExpanded ? 'fixed inset-0 z-50 w-full' : ''}`}>
-                    <StorePreview
-                      storeId={storeId}
-                      expanded={previewExpanded}
-                      onToggleExpand={() => setPreviewExpanded(!previewExpanded)}
-                    />
-                  </div>
-                )}
-              </div>
+      {/* Main Content */}
+      <div className="lg:pl-64 flex flex-col min-h-screen">
+        <main className="flex-1">
+          <div className="py-6 px-4 sm:px-6 lg:px-8">
+            <div className="pb-16 pt-20 lg:pt-0">
+              <Outlet />
             </div>
           </div>
         </main>
       </div>
+
+      {/* Floating Preview Button (Mobile) */}
+      <div className="fixed bottom-4 right-4 z-50 lg:hidden">
+        <button
+          onClick={() => setPreviewVisible(!previewVisible)}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-lg shadow-lg transition-all duration-300 ${
+            previewVisible
+              ? 'bg-green-600 text-white hover:bg-green-700'
+              : 'bg-white text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          {previewVisible ? (
+            <>
+              <EyeOff className="w-5 h-5" />
+              <span className="hidden sm:inline">Ocultar vista previa</span>
+            </>
+          ) : (
+            <>
+              <Eye className="w-5 h-5" />
+              <span className="hidden sm:inline">Ver vista previa</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Store Preview */}
+      <StorePreview
+        storeId={storeId}
+        isVisible={previewVisible}
+        isExpanded={previewExpanded}
+        onToggleVisibility={() => setPreviewVisible(false)}
+        onToggleExpand={() => setPreviewExpanded(!previewExpanded)}
+      />
     </div>
   );
 };

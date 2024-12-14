@@ -65,7 +65,7 @@ export const Register: React.FC = () => {
       if (storeError) throw storeError;
 
       toast.success('¡Registro exitoso! Por favor, inicia sesión para continuar.');
-      navigate('/login');
+      navigate('/auth/login');
       
     } catch (error) {
       console.error('Error en registro:', error);
@@ -86,7 +86,7 @@ export const Register: React.FC = () => {
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
           ¿Ya tienes una cuenta?{' '}
-          <Link to="/login" className="font-medium text-green-600 hover:text-green-500">
+          <Link to="/auth/login" className="font-medium text-green-600 hover:text-green-500">
             Inicia sesión
           </Link>
         </p>

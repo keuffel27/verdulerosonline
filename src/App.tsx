@@ -23,7 +23,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const location = useLocation();
   
   if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/auth/login" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;
@@ -31,14 +31,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
 const AuthRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const user = useAuthStore((state) => state.user);
-  const storeId = useAuthStore((state) => state.storeId);
   const location = useLocation();
   
-  if (user && storeId) {
-    // Si el usuario está autenticado y tiene una tienda, redirigir al panel
-    return <Navigate to={`/store/${storeId}/panel/appearance`} replace />;
-  }
-
   return <>{children}</>;
 };
 
@@ -87,7 +81,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route
-          path="/login"
+          path="/auth/login"
           element={
             <AuthRoute>
               <Login />
@@ -95,7 +89,7 @@ function App() {
           }
         />
         <Route
-          path="/register"
+          path="/auth/register"
           element={
             <AuthRoute>
               <Register />

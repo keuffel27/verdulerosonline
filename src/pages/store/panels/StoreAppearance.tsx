@@ -5,7 +5,7 @@ import { ChromePicker, ColorResult } from 'react-color';
 import { useStoreAppearance } from '../../../hooks/useStoreAppearance';
 import { toast } from 'react-toastify';
 
-const StoreAppearance: React.FC = () => {
+const StoreAppearance = () => {
   const { storeId } = useParams<{ storeId: string }>();
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [selectedColor, setSelectedColor] = useState<'primary' | 'secondary'>('primary');

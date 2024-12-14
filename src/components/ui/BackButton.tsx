@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 
 interface BackButtonProps {
@@ -9,11 +9,22 @@ interface BackButtonProps {
 
 export const BackButton: React.FC<BackButtonProps> = ({ to, className = '' }) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleBack = () => {
+    // Si hay una ruta específica, usarla
     if (to) {
       navigate(to);
+      return;
+    }
+
+    // Prevenir navegación al login
+    if (location.pathname.includes('/store/')) {
+      // Si estamos en el panel de la tienda, navegar a la página principal del panel
+      const storeId = location.pathname.split('/')[2];
+      navigate(`/store/${storeId}/panel/appearance`);
     } else {
+      // En otros casos, usar la navegación normal
       navigate(-1);
     }
   };
