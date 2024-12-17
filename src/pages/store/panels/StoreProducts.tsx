@@ -32,7 +32,11 @@ const StoreProducts: React.FC = () => {
         .from('store_products')
         .select(`
           *,
-          category:store_categories(*)
+          category:store_categories(*),
+          presentations:product_presentations(
+            *,
+            unit:measurement_units(*)
+          )
         `)
         .eq('store_id', storeId);
 
@@ -237,17 +241,20 @@ const StoreProducts: React.FC = () => {
       </div>
 
       {/* Product Form Modal */}
-      {(isAddingProduct || editingProductId) && (
-        <ProductForm
-          storeId={storeId}
-          productId={editingProductId || undefined}
-          onClose={() => {
-            setIsAddingProduct(false);
-            setEditingProductId(null);
-          }}
-          onSuccess={fetchProducts}
-        />
-      )}
+      <ProductForm
+        storeId={storeId}
+        product={editingProductId ? products.find(p => p.id === editingProductId) : undefined}
+        onSuccess={() => {
+          fetchProducts();
+          setIsAddingProduct(false);
+          setEditingProductId(null);
+        }}
+        onCancel={() => {
+          setIsAddingProduct(false);
+          setEditingProductId(null);
+        }}
+        isOpen={isAddingProduct || editingProductId !== null}
+      />
     </div>
   );
 };

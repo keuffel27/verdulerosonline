@@ -33,7 +33,10 @@ export const StoreLogin = () => {
     setIsLoading(true);
     
     try {
-      // 1. Autenticar con Supabase
+      // 1. Cerrar cualquier sesión existente primero
+      await supabase.auth.signOut();
+
+      // 2. Iniciar sesión con las nuevas credenciales
       const { data: { session }, error: authError } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
@@ -48,7 +51,14 @@ export const StoreLogin = () => {
         throw new Error('No se pudo iniciar sesión');
       }
 
-      // 2. Obtener información de la tienda
+      // 3. Configurar el cliente de Supabase con el nuevo token
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('No se pudo obtener la información del usuario');
+      }
+
+      // 4. Buscar la tienda con el nuevo token
       const { data: store, error: storeError } = await supabase
         .from('stores')
         .select(`
@@ -59,20 +69,27 @@ export const StoreLogin = () => {
           access_code,
           status
         `)
-        .eq('owner_id', session.user.id)
+        .eq('owner_id', user.id)
         .single();
 
       if (storeError) {
         console.error('Error al obtener tienda:', storeError);
+        await supabase.auth.signOut();
         throw new Error('No se encontró una tienda asociada a este usuario');
       }
 
-      // 3. Verificar estado de la tienda
+      if (!store) {
+        await supabase.auth.signOut();
+        throw new Error('No se encontró una tienda asociada a este usuario');
+      }
+
+      // 5. Verificar estado de la tienda
       if (store.status === 'inactive') {
+        await supabase.auth.signOut();
         throw new Error('Esta tienda está desactivada. Por favor, contacta con soporte.');
       }
 
-      // 4. Verificar estado de suscripción
+      // 6. Verificar estado de suscripción
       if (store.subscription_status === 'expired') {
         throw new Error('Tu período de prueba ha expirado. Por favor, contacta con soporte.');
       }
@@ -81,7 +98,7 @@ export const StoreLogin = () => {
         throw new Error('Tu suscripción ha sido cancelada. Por favor, contacta con soporte.');
       }
 
-      // 5. Guardar información relevante
+      // 7. Guardar información relevante
       const storeData: StoreData = {
         id: store.id,
         name: store.name,
@@ -91,10 +108,21 @@ export const StoreLogin = () => {
         status: store.status
       };
 
+      // 8. Guardar la información de la sesión y la tienda
       localStorage.setItem('store', JSON.stringify(storeData));
       localStorage.setItem('session', JSON.stringify(session));
 
-      // 6. Redirigir al panel
+      // 9. Configurar el evento de renovación de sesión
+      supabase.auth.onAuthStateChange((event, session) => {
+        if (session) {
+          localStorage.setItem('session', JSON.stringify(session));
+        } else {
+          localStorage.removeItem('session');
+          localStorage.removeItem('store');
+        }
+      });
+
+      // 10. Redirigir al panel
       toast.success('¡Bienvenido!');
       navigate(`/store/${store.id}/panel`);
       

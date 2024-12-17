@@ -29,6 +29,20 @@ const storeSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  whatsappNumber: {
+    type: String,
+    required: true
+  },
+  offersDelivery: {
+    type: Boolean,
+    default: false
+  },
+  socialMedia: {
+    whatsapp: String,
+    facebook: String,
+    instagram: String,
+    twitter: String
+  },
   createdAt: {
     type: Date,
     default: Date.now

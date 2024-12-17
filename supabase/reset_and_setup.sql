@@ -279,6 +279,22 @@ CREATE TABLE store_social_media (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Crear tabla para las conexiones de WhatsApp
+CREATE TABLE IF NOT EXISTS whatsapp_connections (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    store_id TEXT REFERENCES stores(id) ON DELETE CASCADE UNIQUE,
+    phone_number TEXT NOT NULL,
+    is_verified BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- Trigger para actualizar updated_at
+CREATE TRIGGER update_whatsapp_connections_updated_at
+    BEFORE UPDATE ON whatsapp_connections
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
 -- Crear índices
 CREATE INDEX idx_stores_owner_id ON stores(owner_id);
 CREATE INDEX idx_store_users_user_id ON store_users(user_id);
@@ -340,6 +356,7 @@ ALTER TABLE product_presentations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE store_schedule ENABLE ROW LEVEL SECURITY;
 ALTER TABLE store_appearance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE store_social_media ENABLE ROW LEVEL SECURITY;
+ALTER TABLE measurement_units ENABLE ROW LEVEL SECURITY;
 
 -- Políticas para la tabla stores
 CREATE POLICY "Enable insert for authenticated users only" 
@@ -469,7 +486,58 @@ CREATE POLICY "Users can update their store appearance" ON store_appearance
 CREATE POLICY "Store social media viewable by everyone" ON store_social_media
     FOR SELECT USING (true);
 
+CREATE POLICY "Users can insert their store social media" ON store_social_media
+    FOR INSERT WITH CHECK (
+        EXISTS (SELECT 1 FROM stores WHERE id = store_id AND owner_id = auth.uid())
+    );
+
 CREATE POLICY "Users can update their store social media" ON store_social_media
     FOR UPDATE USING (
         EXISTS (SELECT 1 FROM stores WHERE id = store_id AND owner_id = auth.uid())
     );
+
+-- Políticas para measurement_units
+CREATE POLICY "Allow read access to measurement_units for all authenticated users"
+    ON measurement_units
+    FOR SELECT
+    TO authenticated
+    USING (true);
+
+CREATE POLICY "Allow insert to measurement_units for authenticated users only"
+    ON measurement_units
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Allow update to measurement_units for authenticated users only"
+    ON measurement_units
+    FOR UPDATE
+    TO authenticated
+    USING (auth.role() = 'authenticated');
+
+-- Políticas de seguridad para whatsapp_connections
+CREATE POLICY "Users can view their store's WhatsApp connection"
+    ON whatsapp_connections FOR SELECT
+    USING (EXISTS (
+        SELECT 1 FROM stores
+        WHERE stores.id = whatsapp_connections.store_id
+        AND stores.owner_id = auth.uid()
+    ));
+
+CREATE POLICY "Users can update their store's WhatsApp connection"
+    ON whatsapp_connections FOR UPDATE
+    USING (EXISTS (
+        SELECT 1 FROM stores
+        WHERE stores.id = whatsapp_connections.store_id
+        AND stores.owner_id = auth.uid()
+    ));
+
+CREATE POLICY "Users can insert their store's WhatsApp connection"
+    ON whatsapp_connections FOR INSERT
+    WITH CHECK (EXISTS (
+        SELECT 1 FROM stores
+        WHERE stores.id = whatsapp_connections.store_id
+        AND stores.owner_id = auth.uid()
+    ));
+
+ALTER TABLE whatsapp_connections ENABLE ROW LEVEL SECURITY;
