@@ -19,7 +19,20 @@ export default {
           900: '#14532d',
         },
       },
+      keyframes: {
+        shine: {
+          '100%': { transform: 'translateX(100%)' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '200% 0' },
+          '100%': { backgroundPosition: '-200% 0' },
+        }
+      },
+      animation: {
+        shine: 'shine 1.5s ease-in-out infinite',
+        shimmer: 'shimmer 3s linear infinite',
+      }
     },
   },
   plugins: [forms],
-};
+}

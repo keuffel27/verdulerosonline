@@ -22,3 +22,17 @@ input[type="number"],
 textarea {
   @apply rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500;
 }
+
+@layer components {
+  h2 {
+    @apply relative text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-600 via-emerald-500 to-green-400 px-8 py-3 tracking-wide transition-all duration-300 hover:scale-105 text-center mx-auto;
+  }
+  
+  h2::after {
+    @apply content-[''] absolute -bottom-1 left-1/2 -translate-x-1/2 w-3/4 h-[2px] bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent opacity-0 transition-all duration-500;
+  }
+  
+  h2:hover::after {
+    @apply opacity-100;
+  }
+}

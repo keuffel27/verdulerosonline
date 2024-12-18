@@ -30,106 +30,71 @@ export const ProductCard: React.FC<Props> = ({ product, onAddToCart }) => {
   const basePrice = activePresentations[0].price / activePresentations[0].quantity;
   const baseUnit = activePresentations[0].unit;
 
-  const handleAddToCart = () => {
-    if (!selectedPresentation) {
-      toast.error('Por favor selecciona una presentación');
-      return;
-    }
+  // Función para formatear la presentación
+  const formatPresentation = (quantity: number, unit: string) => {
+    if (quantity === 1000 && unit === 'g') return '1 kg';
+    return `${quantity} ${unit}`;
+  };
 
-    if (quantity > selectedPresentation.stock) {
-      toast.error('No hay suficiente stock disponible');
-      return;
-    }
-    
-    onAddToCart(selectedPresentation.id, quantity);
-    setQuantity(1); // Reset quantity after adding to cart
+  // Función para manejar la selección de presentación
+  const handlePresentationSelect = (presentation: ProductPresentation) => {
+    onAddToCart(presentation.id, 1);
+    toast.success('Producto agregado al carrito');
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden">
+    <div className="group relative bg-white/80 backdrop-blur-sm rounded-xl shadow-lg overflow-hidden border border-green-100/30 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/10">
       {/* Imagen del producto */}
-      <div className="relative h-48 bg-gray-200">
-        <img
-          src={product.image_url || noImage}
-          alt={product.name}
-          className="w-full h-full object-cover"
-        />
+      <div className="relative h-48 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+        <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-105">
+          <img
+            src={product.image_url || noImage}
+            alt={product.name}
+            className="w-full h-full object-cover"
+          />
+        </div>
         {product.category && (
-          <span className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-sm">
+          <span className="absolute top-3 right-3 bg-green-500/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-lg z-10">
             {product.category.name}
           </span>
         )}
       </div>
 
       {/* Información del producto */}
-      <div className="p-4">
-        <h3 className="text-lg font-semibold mb-1">{product.name}</h3>
+      <div className="p-5">
+        <h3 className="text-lg font-semibold mb-2 text-gray-800">{product.name}</h3>
         {product.description && (
-          <p className="text-gray-600 text-sm mb-2">{product.description}</p>
+          <p className="text-gray-600 text-sm mb-3 line-clamp-2">{product.description}</p>
         )}
 
         {/* Precio base */}
-        <p className="text-gray-500 text-sm mb-3">
-          Precio base: {formatCurrency(basePrice)}/{baseUnit.symbol}
-        </p>
+        <div className="bg-green-50 rounded-lg p-3 mb-4">
+          <p className="text-sm text-green-800 font-medium">
+            Precio base por 1 {baseUnit.symbol === 'g' ? 'kg' : baseUnit.symbol}:{' '}
+            <span className="text-green-600 font-bold">
+              {formatCurrency(baseUnit.symbol === 'g' ? basePrice * 1000 : basePrice)}
+            </span>
+          </p>
+        </div>
 
         {/* Selector de presentación */}
-        <div className="grid grid-cols-2 gap-2 mb-3">
+        <div className="grid grid-cols-2 gap-3">
           {activePresentations.map((presentation) => (
             <button
               key={presentation.id}
-              onClick={() => setSelectedPresentation(presentation)}
-              className={`px-2 py-1 rounded text-sm ${
-                selectedPresentation?.id === presentation.id
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              onClick={() => handlePresentationSelect(presentation)}
+              className="relative group/btn px-3 py-2.5 rounded-lg text-sm transition-all duration-300 bg-gradient-to-r from-green-400 to-green-600 hover:from-green-500 hover:to-green-700 text-white shadow-md hover:shadow-lg hover:shadow-green-500/30 transform hover:scale-[1.02]"
             >
-              {presentation.quantity} {presentation.unit.symbol}
-              <br />
-              {formatCurrency(presentation.price)}
+              <div className="font-medium">
+                {formatPresentation(presentation.quantity, presentation.unit.symbol)}
+              </div>
+              <div className="text-sm text-green-50">
+                {formatCurrency(presentation.price)}
+              </div>
+              <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-white/0 via-white/10 to-white/0 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
             </button>
           ))}
         </div>
-
-        {/* Control de cantidad */}
-        {selectedPresentation && (
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="p-1 rounded-full bg-gray-100 hover:bg-gray-200"
-              >
-                <Minus size={16} />
-              </button>
-              <span className="w-8 text-center">{quantity}</span>
-              <button
-                onClick={() => setQuantity(Math.min(selectedPresentation.stock, quantity + 1))}
-                className="p-1 rounded-full bg-gray-100 hover:bg-gray-200"
-              >
-                <Plus size={16} />
-              </button>
-            </div>
-            <span className="text-gray-600">
-              Stock: {selectedPresentation.stock}
-            </span>
-          </div>
-        )}
-
-        {/* Botón de agregar al carrito */}
-        <button
-          onClick={handleAddToCart}
-          disabled={!selectedPresentation}
-          className={`w-full py-2 px-4 rounded-lg ${
-            selectedPresentation
-              ? 'bg-green-500 text-white hover:bg-green-600'
-              : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-          }`}
-        >
-          {selectedPresentation
-            ? `Agregar - ${formatCurrency(selectedPresentation.price * quantity)}`
-            : 'Selecciona una presentación'}
-        </button>
       </div>
     </div>
   );

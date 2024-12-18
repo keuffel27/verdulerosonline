@@ -221,7 +221,7 @@ export default function StorePage() {
           // Mostrar productos agrupados por categoría
           categories.map((category) => (
             <div key={category.id} className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">{category.name}</h2>
+              <h2>{category.name}</h2>
               {groupedProducts[category.id]?.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                   {groupedProducts[category.id].map((product) => (

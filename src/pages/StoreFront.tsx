@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { ProductCard } from '../components/store/products/ProductCard';
 import { StoreNavigation } from '../components/store/StoreNavigation';
+import { CategoryGrid } from '../components/store/CategoryGrid';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-toastify';
 import type { Product, Category, Store } from '../types/store';
@@ -12,6 +13,7 @@ export const StoreFront: React.FC = () => {
   const { storeId } = useParams();
   const [searchParams] = useSearchParams();
   const categoryId = searchParams.get('category');
+  const navigate = useNavigate();
   
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -27,27 +29,45 @@ export const StoreFront: React.FC = () => {
       if (!storeId) return;
 
       try {
+        setLoading(true);
         const { data: storeData, error: storeError } = await supabase
           .from('stores')
           .select(`
-            *,
-            store_appearance(*),
-            store_social_media(*),
-            store_schedule(*)
+            id,
+            name,
+            description,
+            status,
+            store_appearance (
+              logo_url,
+              banner_url,
+              primary_color,
+              secondary_color
+            ),
+            store_social_media (
+              instagram_url,
+              facebook_url,
+              whatsapp_number
+            ),
+            store_schedule (
+              *
+            )
           `)
           .eq('id', storeId)
+          .eq('status', 'active')
           .single();
 
-        if (storeError) throw storeError;
-        setStore(storeData);
+        if (storeError) {
+          console.error('Error fetching store:', storeError);
+          return;
+        }
 
-        // Aquí implementarías la lógica para determinar si la tienda está abierta
-        // basándote en store_schedule
-        // Por ahora lo dejaremos hardcodeado
-        setIsOpen(true);
+        setStore(storeData);
+        setIsOpen(true); // Temporal, luego implementar lógica real
         setNextOpenTime('8h 42m');
       } catch (error) {
         console.error('Error fetching store:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -61,11 +81,14 @@ export const StoreFront: React.FC = () => {
       try {
         const { data, error } = await supabase
           .from('store_categories')
-          .select('*')
+          .select('id, name, order_index')
           .eq('store_id', storeId)
           .order('order_index');
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching categories:', error);
+          return;
+        }
         setCategories(data || []);
       } catch (error) {
         console.error('Error fetching categories:', error);
@@ -85,17 +108,32 @@ export const StoreFront: React.FC = () => {
         const query = supabase
           .from('store_products')
           .select(`
-            *,
-            category:store_categories(*),
-            presentations:product_presentations(
-              *,
-              unit:measurement_units(*)
+            id,
+            name,
+            description,
+            image_url,
+            status,
+            category:store_categories (
+              id,
+              name
+            ),
+            presentations:product_presentations (
+              id,
+              quantity,
+              price,
+              stock,
+              status,
+              is_default,
+              unit:measurement_units (
+                id,
+                name,
+                symbol
+              )
             )
           `)
           .eq('store_id', storeId)
           .eq('status', 'active');
 
-        // Aplicar filtro por categoría si está seleccionada
         if (categoryId && categoryId !== 'all') {
           query.eq('category_id', categoryId);
         }
@@ -104,11 +142,9 @@ export const StoreFront: React.FC = () => {
 
         if (error) {
           console.error('Error fetching products:', error);
-          toast.error('Error al cargar los productos');
           return;
         }
 
-        // Filtrar productos que tienen presentaciones activas
         const productsWithActivePresentations = productsData?.filter(product => {
           const activePresentations = product.presentations?.filter(p => p.status === 'active') || [];
           product.presentations = activePresentations;
@@ -117,8 +153,7 @@ export const StoreFront: React.FC = () => {
 
         setProducts(productsWithActivePresentations);
       } catch (error) {
-        console.error('Error:', error);
-        toast.error('Error al cargar los productos');
+        console.error('Error fetching products:', error);
       } finally {
         setLoading(false);
       }
@@ -128,93 +163,106 @@ export const StoreFront: React.FC = () => {
   }, [storeId, categoryId]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-green-50/10 to-gray-100">
       {/* Store Header */}
-      <div className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold">{store?.name || 'Cargando...'}</h1>
-            <div className="flex items-center space-x-4">
-              {store?.store_social_media?.instagram_url && (
-                <a href={store.store_social_media.instagram_url} target="_blank" rel="noopener noreferrer">
-                  <Instagram className="w-6 h-6" />
-                </a>
+      <div className="bg-white/80 backdrop-blur-sm shadow-lg border-b border-green-100/30">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex flex-col items-center text-center md:flex-row md:justify-between md:items-center space-y-4 md:space-y-0">
+            {/* Logo y Nombre de la Tienda */}
+            <div className="flex-1 flex flex-col items-center md:items-start">
+              {store?.store_appearance?.logo_url ? (
+                <div className="relative w-20 h-20 sm:w-24 sm:h-24 mb-3 group">
+                  <div className="absolute inset-0 bg-gradient-to-r from-green-400/20 to-green-600/20 rounded-full blur-xl group-hover:blur-2xl transition-all duration-500"></div>
+                  <img
+                    src={store.store_appearance.logo_url}
+                    alt={store.name}
+                    className="relative w-full h-full object-contain rounded-full"
+                  />
+                </div>
+              ) : (
+                <div className="w-20 h-20 sm:w-24 sm:h-24 mb-3 bg-gradient-to-r from-green-400 to-green-600 rounded-full flex items-center justify-center">
+                  <span className="text-2xl sm:text-3xl font-bold text-white">
+                    {store?.name?.[0]?.toUpperCase()}
+                  </span>
+                </div>
               )}
-              {store?.store_social_media?.facebook_url && (
-                <a href={store.store_social_media.facebook_url} target="_blank" rel="noopener noreferrer">
-                  <Facebook className="w-6 h-6" />
-                </a>
-              )}
-              {store?.store_social_media?.whatsapp_number && (
-                <a href={`https://wa.me/${store.store_social_media.whatsapp_number}`} target="_blank" rel="noopener noreferrer">
-                  <MessageCircle className="w-6 h-6" />
-                </a>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{store?.name}</h1>
+              {store?.description && (
+                <p className="mt-1 text-sm sm:text-base text-gray-600 max-w-md">{store.description}</p>
               )}
             </div>
-          </div>
-          
-          <div className="mt-4 flex items-center space-x-2">
-            <Clock className="w-5 h-5" />
-            <div className="flex items-center space-x-2">
-              <span className={`px-2 py-1 rounded-full text-sm font-medium ${
-                isOpen ? 'bg-green-400' : 'bg-red-400'
-              }`}>
-                {isOpen ? 'Abierto' : 'Cerrado'}
-              </span>
-              {!isOpen && nextOpenTime && (
-                <span className="text-sm">
-                  Abre en {nextOpenTime}
+
+            {/* Estado de la tienda */}
+            <div className="flex flex-col items-center md:items-end space-y-2">
+              <div
+                className={`flex items-center space-x-2 px-4 py-2 rounded-full ${
+                  isOpen
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-red-100 text-red-800'
+                }`}
+              >
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    isOpen ? 'bg-green-500' : 'bg-red-500'
+                  }`}
+                />
+                <span className="font-medium">
+                  {isOpen ? 'Abierto' : 'Cerrado'}
                 </span>
+              </div>
+              {!isOpen && nextOpenTime && (
+                <p className="text-sm text-gray-500">
+                  Abre en {nextOpenTime}
+                </p>
               )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Navigation */}
-      <StoreNavigation categories={categories} />
+      {/* Categorías y Productos */}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {/* Título de Categorías */}
+        <div className="text-center mb-8 sm:mb-12">
+          <h2>Nuestras Categorías</h2>
+          <p className="mt-4 sm:mt-6 text-gray-600 max-w-2xl mx-auto font-medium text-sm sm:text-base">
+            Explora nuestra selección de productos frescos organizados por categorías
+          </p>
+          <div className="relative mt-4 sm:mt-6 flex justify-center">
+            <div className="absolute top-1/2 -translate-y-1/2 w-full max-w-xs h-px bg-gradient-to-r from-transparent via-green-300/50 to-transparent"></div>
+            <div className="w-2 h-2 bg-gradient-to-br from-green-500 to-emerald-400 rounded-full shadow-lg shadow-green-500/30"></div>
+          </div>
+        </div>
 
-      {/* Products Grid */}
-      <div className="container mx-auto px-4 py-8">
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
-              <div className="space-y-3 mt-4">
-                <div className="h-4 bg-gray-200 rounded"></div>
-                <div className="h-4 bg-gray-200 rounded"></div>
-                <div className="h-4 bg-gray-200 rounded"></div>
-              </div>
-            </div>
-          </div>
-        ) : products.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">
-              No hay productos disponibles{categoryId ? ' en esta categoría' : ''}
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {products.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onAddToCart={(presentationId, quantity) => {
-                  const presentation = product.presentations.find(p => p.id === presentationId);
-                  if (!presentation) {
-                    toast.error('Error al agregar el producto');
-                    return;
-                  }
-                  addToCart({
-                    product,
-                    presentation,
-                    quantity
-                  });
-                }}
-              />
-            ))}
-          </div>
-        )}
+        {/* Categorías */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+          <CategoryGrid
+            categories={categories}
+            currentCategory={categoryId}
+            onCategoryChange={(id) => {
+              const newSearchParams = new URLSearchParams(searchParams);
+              if (id) {
+                newSearchParams.set('category', id);
+              } else {
+                newSearchParams.delete('category');
+              }
+              navigate(`/store/${storeId}?${newSearchParams.toString()}`);
+            }}
+          />
+        </div>
+
+        {/* Productos */}
+        <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-6">
+          {products.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              onAddToCart={(presentationId, quantity) =>
+                addToCart(product, presentationId, quantity)
+              }
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
