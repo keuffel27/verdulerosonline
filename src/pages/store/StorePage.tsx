@@ -3,28 +3,12 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { FloatingCart } from '../../components/store/FloatingCart';
 import { Search, MapPin, Clock } from 'lucide-react';
-import type { Database } from '../../types/supabase';
+import type { Database } from '../../lib/database.types';
+import type { Product, Category } from '../../types/store';
+import { ProductCard } from '../../components/store/products/ProductCard';
+import { useCart } from '../../hooks/useCart';
 
 type Store = Database['public']['Tables']['stores']['Row'];
-
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  image_url: string;
-  price: number;
-  sale_price?: number;
-  stock: number;
-  status: 'active' | 'inactive';
-  category_id: string;
-  store_id: string;
-  order_index: number;
-}
-
-interface Category {
-  id: string;
-  name: string;
-}
 
 export default function StorePage() {
   const { storeId } = useParams<{ storeId: string }>();
@@ -34,58 +18,71 @@ export default function StorePage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [isOpen, setIsOpen] = useState(false); // Estado para el horario de la tienda
+  const [isOpen, setIsOpen] = useState(false);
+  const { addToCart } = useCart();
 
   useEffect(() => {
     if (storeId) {
       fetchStore();
+      fetchProducts();
+      fetchCategories();
     }
   }, [storeId]);
 
-  // Función para verificar si la tienda está abierta (simulada por ahora)
-  useEffect(() => {
-    // Aquí puedes implementar la lógica real para verificar el horario
-    setIsOpen(true); // Por ahora siempre abierto
-  }, []);
-
   const fetchStore = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: storeData, error } = await supabase
         .from('stores')
         .select(`
           *,
-          store_appearance(*),
-          store_social_media(*),
-          store_schedule(*)
+          store_schedule(*),
+          store_appearance(*)
         `)
         .eq('id', storeId)
         .single();
 
       if (error) throw error;
-      if (data) {
-        setStore(data);
-        fetchProducts(data.id);
-        fetchCategories(data.id);
-      }
+      setStore(storeData);
     } catch (error) {
       console.error('Error fetching store:', error);
     }
   };
 
-  const fetchProducts = async (id: string) => {
+  const fetchProducts = async () => {
+    if (!storeId) return;
+
     try {
-      const { data, error } = await supabase
+      setLoading(true);
+      
+      const query = supabase
         .from('store_products')
         .select(`
           *,
-          category:store_categories(*)
+          category:store_categories(*),
+          presentations:product_presentations(
+            *,
+            unit:measurement_units(*)
+          )
         `)
-        .eq('store_id', id)
-        .eq('status', 'active')
-        .order('order_index');
+        .eq('store_id', storeId)
+        .eq('status', 'active');
+
+      if (selectedCategory !== 'all') {
+        query.eq('category_id', selectedCategory);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
-      setProducts(data || []);
+
+      // Filtrar productos que tienen presentaciones activas
+      const productsWithActivePresentations = data?.filter(product => {
+        const activePresentations = product.presentations?.filter(p => p.status === 'active') || [];
+        product.presentations = activePresentations;
+        return activePresentations.length > 0;
+      }) || [];
+
+      setProducts(productsWithActivePresentations);
     } catch (error) {
       console.error('Error fetching products:', error);
     } finally {
@@ -93,12 +90,15 @@ export default function StorePage() {
     }
   };
 
-  const fetchCategories = async (id: string) => {
+  const fetchCategories = async () => {
+    if (!storeId) return;
+
     try {
       const { data, error } = await supabase
         .from('store_categories')
         .select('*')
-        .eq('store_id', id);
+        .eq('store_id', storeId)
+        .order('order_index');
 
       if (error) throw error;
       setCategories(data || []);
@@ -106,6 +106,13 @@ export default function StorePage() {
       console.error('Error fetching categories:', error);
     }
   };
+
+  // Efecto para actualizar productos cuando cambia la categoría
+  useEffect(() => {
+    if (storeId) {
+      fetchProducts();
+    }
+  }, [selectedCategory]);
 
   const filteredProducts = products.filter((product) => {
     const matchesCategory = selectedCategory === 'all' || product.category_id === selectedCategory;
@@ -218,35 +225,13 @@ export default function StorePage() {
               {groupedProducts[category.id]?.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                   {groupedProducts[category.id].map((product) => (
-                    <div
+                    <ProductCard
                       key={product.id}
-                      className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-                    >
-                      <div className="aspect-w-1 aspect-h-1">
-                        <img
-                          src={product.image_url || '/no-image.png'}
-                          alt={product.name}
-                          className="w-full h-48 object-cover"
-                        />
-                      </div>
-                      <div className="p-4">
-                        <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
-                        <p className="text-sm text-gray-500 mt-1">{product.description}</p>
-                        <div className="mt-4 flex justify-between items-center">
-                          <span className="text-lg font-bold text-green-600">
-                            ${product.price}/{product.stock}
-                          </span>
-                          <button
-                            onClick={() => {
-                              // TODO: Implementar lógica de agregar al carrito
-                            }}
-                            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-                          >
-                            Agregar
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                      product={product}
+                      onAddToCart={(presentationId, quantity) => 
+                        addToCart(product, presentationId, quantity)
+                      }
+                    />
                   ))}
                 </div>
               ) : (
@@ -258,35 +243,13 @@ export default function StorePage() {
           // Mostrar productos filtrados por categoría seleccionada
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {filteredProducts.map((product) => (
-              <div
+              <ProductCard
                 key={product.id}
-                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-              >
-                <div className="aspect-w-1 aspect-h-1">
-                  <img
-                    src={product.image_url || '/no-image.png'}
-                    alt={product.name}
-                    className="w-full h-48 object-cover"
-                  />
-                </div>
-                <div className="p-4">
-                  <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
-                  <p className="text-sm text-gray-500 mt-1">{product.description}</p>
-                  <div className="mt-4 flex justify-between items-center">
-                    <span className="text-lg font-bold text-green-600">
-                      ${product.price}/{product.stock}
-                    </span>
-                    <button
-                      onClick={() => {
-                        // TODO: Implementar lógica de agregar al carrito
-                      }}
-                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                      Agregar
-                    </button>
-                  </div>
-                </div>
-              </div>
+                product={product}
+                onAddToCart={(presentationId, quantity) => 
+                  addToCart(product, presentationId, quantity)
+                }
+              />
             ))}
           </div>
         )}

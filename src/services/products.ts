@@ -7,41 +7,56 @@ type MeasurementUnit = Database['public']['Tables']['measurement_units']['Row'];
 
 interface ProductWithPresentations extends Product {
   presentations: (ProductPresentation & { unit: MeasurementUnit })[];
+  category?: Database['public']['Tables']['store_categories']['Row'];
 }
 
 export const getProducts = async (storeId: string): Promise<ProductWithPresentations[]> => {
   const { data: products, error } = await supabase
     .from('store_products')
-    .select('*, presentations:product_presentations(*, unit:measurement_units(*))')
+    .select(`
+      *,
+      category:store_categories(*),
+      presentations:product_presentations (
+        *,
+        unit:measurement_units (*)
+      )
+    `)
     .eq('store_id', storeId)
-    .order('order_index');
+    .order('created_at');
 
   if (error) throw error;
-  return products as ProductWithPresentations[];
+  return products || [];
 };
 
 export const getProductById = async (productId: string): Promise<ProductWithPresentations | null> => {
   const { data: product, error } = await supabase
     .from('store_products')
-    .select('*, presentations:product_presentations(*, unit:measurement_units(*))')
+    .select(`
+      *,
+      category:store_categories(*),
+      presentations:product_presentations (
+        *,
+        unit:measurement_units (*)
+      )
+    `)
     .eq('id', productId)
     .single();
 
   if (error) throw error;
-  return product as ProductWithPresentations;
+  return product;
 };
 
 interface CreateProductInput {
   storeId: string;
   name: string;
-  description?: string;
-  categoryId?: string;
-  imageUrl?: string;
+  description?: string | null;
+  categoryId?: string | null;
+  imageUrl?: string | null;
   presentations: Array<{
     unitId: string;
     quantity: number;
     price: number;
-    salePrice?: number;
+    salePrice?: number | null;
     stock?: number;
     isDefault?: boolean;
   }>;
@@ -50,18 +65,7 @@ interface CreateProductInput {
 export const createProduct = async (input: CreateProductInput): Promise<ProductWithPresentations> => {
   const { storeId, name, description, categoryId, imageUrl, presentations } = input;
 
-  // Get the maximum order_index
-  const { data: maxOrderIndex } = await supabase
-    .from('store_products')
-    .select('order_index')
-    .eq('store_id', storeId)
-    .order('order_index', { ascending: false })
-    .limit(1)
-    .single();
-
-  const newOrderIndex = (maxOrderIndex?.order_index ?? -1) + 1;
-
-  // Create the product
+  // Crear el producto
   const { data: product, error: productError } = await supabase
     .from('store_products')
     .insert({
@@ -70,50 +74,53 @@ export const createProduct = async (input: CreateProductInput): Promise<ProductW
       description,
       category_id: categoryId,
       image_url: imageUrl,
-      order_index: newOrderIndex,
       status: 'active'
     })
-    .select()
+    .select('*')
     .single();
 
   if (productError) {
     console.error('Error creating product:', productError);
-    throw productError;
+    throw new Error(`Error al crear el producto: ${productError.message}`);
   }
 
   if (!product) {
     throw new Error('No se pudo crear el producto');
   }
 
-  // Create the presentations
-  const presentationPromises = presentations.map(presentation => 
-    supabase
-      .from('product_presentations')
-      .insert({
-        product_id: product.id,
-        unit_id: presentation.unitId,
-        quantity: presentation.quantity,
-        price: presentation.price,
-        sale_price: presentation.salePrice,
-        stock: presentation.stock ?? 0,
-        is_default: presentation.isDefault ?? false,
-        status: 'active'
-      })
-  );
+  // Crear las presentaciones
+  const presentationsToInsert = presentations.map(p => ({
+    product_id: product.id,
+    unit_id: p.unitId,
+    quantity: p.quantity,
+    price: p.price,
+    sale_price: p.salePrice,
+    stock: p.stock ?? 0,
+    is_default: p.isDefault ?? false,
+    status: 'active'
+  }));
 
-  try {
-    await Promise.all(presentationPromises);
-  } catch (error) {
-    console.error('Error creating presentations:', error);
+  const { error: presentationsError } = await supabase
+    .from('product_presentations')
+    .insert(presentationsToInsert);
+
+  if (presentationsError) {
     // Si falla la creación de presentaciones, eliminamos el producto
     await supabase
       .from('store_products')
       .delete()
       .eq('id', product.id);
-    throw error;
+    
+    throw new Error(`Error al crear las presentaciones: ${presentationsError.message}`);
   }
 
-  return await getProductById(product.id);
+  // Obtener el producto completo con sus presentaciones
+  const createdProduct = await getProductById(product.id);
+  if (!createdProduct) {
+    throw new Error('No se pudo obtener el producto creado');
+  }
+
+  return createdProduct;
 };
 
 interface UpdateProductInput {

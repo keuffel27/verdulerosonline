@@ -1,21 +1,66 @@
 import type { Database } from '../lib/database.types';
 
-export type Product = Database['public']['Tables']['store_products']['Row'] & {
-  presentations: (Database['public']['Tables']['product_presentations']['Row'] & {
-    unit: Database['public']['Tables']['measurement_units']['Row']
-  })[];
-  category?: Database['public']['Tables']['store_categories']['Row'];
-};
+export interface Product {
+  id: string;
+  store_id: string;
+  category_id?: string;
+  name: string;
+  description?: string;
+  image_url?: string;
+  status: 'active' | 'inactive';
+  category?: Category;
+  presentations: ProductPresentation[];
+}
 
-export type Category = Database['public']['Tables']['store_categories']['Row'];
+export interface Category {
+  id: string;
+  store_id: string;
+  name: string;
+  description?: string;
+  image_url?: string;
+  order_index: number;
+}
 
-export type Store = Database['public']['Tables']['stores']['Row'] & {
+export interface ProductPresentation {
+  id: string;
+  product_id: string;
+  unit_id: string;
+  quantity: number;
+  price: number;
+  sale_price?: number;
+  stock: number;
+  status: 'active' | 'inactive';
+  is_default: boolean;
+  unit: MeasurementUnit;
+}
+
+export interface MeasurementUnit {
+  id: string;
+  name: string;
+  symbol: string;
+  system: 'metric' | 'imperial';
+  base_unit: boolean;
+  conversion_factor?: number;
+  base_unit_id?: string;
+}
+
+export interface CartItem {
+  product: Product;
+  presentation: ProductPresentation;
+  quantity: number;
+}
+
+export interface Store {
+  id: string;
+  name: string;
+  description?: string;
+  status: 'active' | 'inactive';
   store_social_media?: {
     instagram_url?: string;
     facebook_url?: string;
     whatsapp_number?: string;
   };
-};
+}
 
 export type StoreConfig = {
   name: string;
@@ -44,14 +89,6 @@ export type StoreConfig = {
     }[];
   };
 };
-
-export interface CartItem {
-  product: Product;
-  presentation: Database['public']['Tables']['product_presentations']['Row'] & {
-    unit: Database['public']['Tables']['measurement_units']['Row']
-  };
-  quantity: number;
-}
 
 export interface CustomerInfo {
   name: string;

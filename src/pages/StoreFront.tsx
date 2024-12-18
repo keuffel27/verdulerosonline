@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { ProductCard } from '../components/store/ProductCard';
+import { ProductCard } from '../components/store/products/ProductCard';
 import { StoreNavigation } from '../components/store/StoreNavigation';
 import { supabase } from '../lib/supabase';
+import { toast } from 'react-toastify';
 import type { Product, Category, Store } from '../types/store';
 import { Instagram, Facebook, MessageCircle, Clock } from 'lucide-react';
+import { useCart } from '../hooks/useCart';
 
 export const StoreFront: React.FC = () => {
   const { storeId } = useParams();
@@ -17,6 +19,8 @@ export const StoreFront: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [nextOpenTime, setNextOpenTime] = useState<string>('');
+
+  const { addToCart } = useCart();
 
   useEffect(() => {
     const fetchStoreData = async () => {
@@ -76,7 +80,9 @@ export const StoreFront: React.FC = () => {
       if (!storeId) return;
 
       try {
-        let query = supabase
+        setLoading(true);
+        
+        const query = supabase
           .from('store_products')
           .select(`
             *,
@@ -87,26 +93,32 @@ export const StoreFront: React.FC = () => {
             )
           `)
           .eq('store_id', storeId)
-          .eq('status', 'active')
-          .order('name');
+          .eq('status', 'active');
 
-        if (categoryId) {
-          query = query.eq('category_id', categoryId);
+        // Aplicar filtro por categoría si está seleccionada
+        if (categoryId && categoryId !== 'all') {
+          query.eq('category_id', categoryId);
         }
 
-        const { data, error } = await query;
+        const { data: productsData, error } = await query;
 
-        if (error) throw error;
-        
+        if (error) {
+          console.error('Error fetching products:', error);
+          toast.error('Error al cargar los productos');
+          return;
+        }
+
         // Filtrar productos que tienen presentaciones activas
-        const productsWithPresentations = data?.filter(
-          product => product.presentations?.some(p => p.status === 'active')
-        ) || [];
-        
-        setProducts(productsWithPresentations);
+        const productsWithActivePresentations = productsData?.filter(product => {
+          const activePresentations = product.presentations?.filter(p => p.status === 'active') || [];
+          product.presentations = activePresentations;
+          return activePresentations.length > 0;
+        }) || [];
+
+        setProducts(productsWithActivePresentations);
       } catch (error) {
-        console.error('Error fetching products:', error);
-        // toast.error('Error al cargar los productos');
+        console.error('Error:', error);
+        toast.error('Error al cargar los productos');
       } finally {
         setLoading(false);
       }
@@ -117,8 +129,8 @@ export const StoreFront: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header con información de la tienda */}
-      <header className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+      {/* Store Header */}
+      <div className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold">{store?.name || 'Cargando...'}</h1>
@@ -157,47 +169,53 @@ export const StoreFront: React.FC = () => {
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
-      {/* Barra de navegación y búsqueda */}
-      <StoreNavigation storeId={storeId!} categories={categories} />
+      {/* Navigation */}
+      <StoreNavigation categories={categories} />
 
-      {/* Contenido principal */}
-      <main className="container mx-auto px-4 py-8">
-        {/* Botones de categoría destacados */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          {categories.slice(0, 2).map((category) => (
-            <button
-              key={category.id}
-              onClick={() => {
-                const newSearchParams = new URLSearchParams(searchParams);
-                newSearchParams.set('category', category.id);
-                window.location.search = newSearchParams.toString();
-              }}
-              className="bg-white rounded-lg shadow-md p-6 text-center hover:shadow-lg transition-shadow"
-            >
-              <h3 className="text-xl font-semibold text-gray-800">{category.name}</h3>
-            </button>
-          ))}
-        </div>
-
-        {/* Lista de productos */}
+      {/* Products Grid */}
+      <div className="container mx-auto px-4 py-8">
         {loading ? (
           <div className="text-center py-12">
-            <div className="text-gray-500">Cargando productos...</div>
+            <div className="animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
+              <div className="space-y-3 mt-4">
+                <div className="h-4 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded"></div>
+              </div>
+            </div>
           </div>
         ) : products.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-gray-500">No hay productos disponibles</div>
+            <p className="text-gray-500 text-lg">
+              No hay productos disponibles{categoryId ? ' en esta categoría' : ''}
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard
+                key={product.id}
+                product={product}
+                onAddToCart={(presentationId, quantity) => {
+                  const presentation = product.presentations.find(p => p.id === presentationId);
+                  if (!presentation) {
+                    toast.error('Error al agregar el producto');
+                    return;
+                  }
+                  addToCart({
+                    product,
+                    presentation,
+                    quantity
+                  });
+                }}
+              />
             ))}
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 };

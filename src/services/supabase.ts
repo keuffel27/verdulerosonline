@@ -1,25 +1,29 @@
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '../lib/database.types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Supabase URL and Anon Key must be defined in .env file');
+  throw new Error('Missing Supabase environment variables');
 }
 
 // Configuración del cliente con manejo robusto de sesión
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
-    autoRefreshToken: true,
     persistSession: true,
+    autoRefreshToken: true,
     detectSessionInUrl: true,
     storage: localStorage,
     storageKey: 'verduleros-auth-token',
     flowType: 'pkce'
   },
+  db: {
+    schema: 'public'
+  },
   global: {
     headers: {
-      'x-client-info': 'verduleros-online'
+      'X-Client-Info': 'verduleros-online'
     }
   }
 });

@@ -246,13 +246,13 @@ export const ProductForm: React.FC<Props> = ({
             price: p.price,
             isDefault: p.isDefault ?? false,
             stock: p.stock ?? 0,
-            salePrice: p.price, // Using the same price as salePrice by default
+            salePrice: p.price,
             status: 'active'
-          })),
+          }))
         });
         toast.success('Producto actualizado correctamente');
       } else {
-        await createProduct({
+        const productInput = {
           storeId,
           name: data.name,
           description: data.description || null,
@@ -264,10 +264,11 @@ export const ProductForm: React.FC<Props> = ({
             price: p.price,
             isDefault: p.isDefault ?? false,
             stock: p.stock ?? 0,
-            salePrice: p.price, // Using the same price as salePrice by default
-            status: 'active'
-          })),
-        });
+            salePrice: p.price
+          }))
+        };
+
+        await createProduct(productInput);
         toast.success('Producto creado correctamente');
       }
 

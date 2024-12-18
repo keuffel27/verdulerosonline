@@ -1,17 +1,9 @@
 import React, { useState } from 'react';
+import { toast } from 'react-toastify';
 import { formatCurrency } from '../../../utils/format';
-import type { Database } from '../../../lib/database.types';
+import type { Product, ProductPresentation } from '../../../types/store';
 import noImage from '../../../assets/no-image';
-import { ProductQuantitySelector } from './ProductQuantitySelector';
-
-type ProductPresentation = Database['public']['Tables']['product_presentations']['Row'] & {
-  unit: Database['public']['Tables']['measurement_units']['Row']
-};
-
-type Product = Database['public']['Tables']['store_products']['Row'] & {
-  presentations: ProductPresentation[];
-  category?: Database['public']['Tables']['store_categories']['Row'];
-};
+import { Plus, Minus } from 'lucide-react';
 
 interface Props {
   product: Product;
@@ -19,35 +11,51 @@ interface Props {
 }
 
 export const ProductCard: React.FC<Props> = ({ product, onAddToCart }) => {
-  const [selectedPresentation, setSelectedPresentation] = useState<ProductPresentation>(
-    product.presentations.find(p => p.is_default) || product.presentations[0]
+  const [selectedPresentation, setSelectedPresentation] = useState<ProductPresentation | null>(
+    product.presentations.find(p => p.is_default && p.status === 'active') || 
+    product.presentations.find(p => p.status === 'active') || 
+    null
   );
   const [quantity, setQuantity] = useState(1);
 
+  // Filtrar solo presentaciones activas y ordenar por precio
+  const activePresentations = product.presentations
+    .filter(p => p.status === 'active')
+    .sort((a, b) => a.price - b.price);
+
+  if (activePresentations.length === 0 || product.status !== 'active') {
+    return null;
+  }
+
+  const basePrice = activePresentations[0].price / activePresentations[0].quantity;
+  const baseUnit = activePresentations[0].unit;
+
   const handleAddToCart = () => {
-    if (selectedPresentation) {
-      onAddToCart(selectedPresentation.id, quantity);
-      setQuantity(1); // Reset quantity after adding to cart
+    if (!selectedPresentation) {
+      toast.error('Por favor selecciona una presentación');
+      return;
     }
+
+    if (quantity > selectedPresentation.stock) {
+      toast.error('No hay suficiente stock disponible');
+      return;
+    }
+    
+    onAddToCart(selectedPresentation.id, quantity);
+    setQuantity(1); // Reset quantity after adding to cart
   };
 
-  if (!selectedPresentation) return null;
-
   return (
-    <div className="bg-white rounded-lg shadow hover:shadow-md transition-shadow">
-      {/* Imagen y categoría */}
-      <div className="relative aspect-square">
+    <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      {/* Imagen del producto */}
+      <div className="relative h-48 bg-gray-200">
         <img
           src={product.image_url || noImage}
           alt={product.name}
-          className="w-full h-full object-cover rounded-t-lg"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.src = noImage;
-          }}
+          className="w-full h-full object-cover"
         />
         {product.category && (
-          <span className="absolute top-2 right-2 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+          <span className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-sm">
             {product.category.name}
           </span>
         )}
@@ -55,61 +63,73 @@ export const ProductCard: React.FC<Props> = ({ product, onAddToCart }) => {
 
       {/* Información del producto */}
       <div className="p-4">
-        <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
-        
+        <h3 className="text-lg font-semibold mb-1">{product.name}</h3>
         {product.description && (
-          <p className="mt-1 text-sm text-gray-500 line-clamp-2">
-            {product.description}
-          </p>
+          <p className="text-gray-600 text-sm mb-2">{product.description}</p>
         )}
 
-        {/* Presentaciones */}
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          {product.presentations.map((presentation) => (
+        {/* Precio base */}
+        <p className="text-gray-500 text-sm mb-3">
+          Precio base: {formatCurrency(basePrice)}/{baseUnit.symbol}
+        </p>
+
+        {/* Selector de presentación */}
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          {activePresentations.map((presentation) => (
             <button
               key={presentation.id}
               onClick={() => setSelectedPresentation(presentation)}
-              className={`flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-colors ${
-                selectedPresentation.id === presentation.id
-                  ? 'border-green-500 bg-green-50'
-                  : 'border-gray-200 hover:border-green-500 hover:bg-green-50'
+              className={`px-2 py-1 rounded text-sm ${
+                selectedPresentation?.id === presentation.id
+                  ? 'bg-green-500 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
-              disabled={presentation.stock <= 0}
             >
-              <span className="text-sm font-medium">
-                {presentation.quantity} {presentation.unit.symbol}
-              </span>
-              <span className="text-green-600 font-bold">
-                {formatCurrency(presentation.price)}
-              </span>
-              {presentation.stock <= 0 && (
-                <span className="text-red-500 text-xs">Sin stock</span>
-              )}
+              {presentation.quantity} {presentation.unit.symbol}
+              <br />
+              {formatCurrency(presentation.price)}
             </button>
           ))}
         </div>
 
-        {/* Selector de cantidad y botón de agregar */}
-        <div className="mt-4 flex items-center justify-between gap-4">
-          <ProductQuantitySelector
-            quantity={quantity}
-            onChange={setQuantity}
-            max={selectedPresentation.stock}
-            disabled={selectedPresentation.stock <= 0}
-          />
-          
-          <button
-            onClick={handleAddToCart}
-            disabled={selectedPresentation.stock <= 0}
-            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
-              selectedPresentation.stock <= 0
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-green-500 text-white hover:bg-green-600'
-            }`}
-          >
-            {selectedPresentation.stock <= 0 ? 'Sin stock' : 'Agregar'}
-          </button>
-        </div>
+        {/* Control de cantidad */}
+        {selectedPresentation && (
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                className="p-1 rounded-full bg-gray-100 hover:bg-gray-200"
+              >
+                <Minus size={16} />
+              </button>
+              <span className="w-8 text-center">{quantity}</span>
+              <button
+                onClick={() => setQuantity(Math.min(selectedPresentation.stock, quantity + 1))}
+                className="p-1 rounded-full bg-gray-100 hover:bg-gray-200"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+            <span className="text-gray-600">
+              Stock: {selectedPresentation.stock}
+            </span>
+          </div>
+        )}
+
+        {/* Botón de agregar al carrito */}
+        <button
+          onClick={handleAddToCart}
+          disabled={!selectedPresentation}
+          className={`w-full py-2 px-4 rounded-lg ${
+            selectedPresentation
+              ? 'bg-green-500 text-white hover:bg-green-600'
+              : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+          }`}
+        >
+          {selectedPresentation
+            ? `Agregar - ${formatCurrency(selectedPresentation.price * quantity)}`
+            : 'Selecciona una presentación'}
+        </button>
       </div>
     </div>
   );
