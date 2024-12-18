@@ -80,10 +80,15 @@ export const StoreFront: React.FC = () => {
           .from('store_products')
           .select(`
             *,
-            category:store_categories(*)
+            category:store_categories(*),
+            presentations:product_presentations(
+              *,
+              unit:measurement_units(*)
+            )
           `)
           .eq('store_id', storeId)
-          .eq('status', 'active');
+          .eq('status', 'active')
+          .order('name');
 
         if (categoryId) {
           query = query.eq('category_id', categoryId);
@@ -92,9 +97,16 @@ export const StoreFront: React.FC = () => {
         const { data, error } = await query;
 
         if (error) throw error;
-        setProducts(data || []);
+        
+        // Filtrar productos que tienen presentaciones activas
+        const productsWithPresentations = data?.filter(
+          product => product.presentations?.some(p => p.status === 'active')
+        ) || [];
+        
+        setProducts(productsWithPresentations);
       } catch (error) {
         console.error('Error fetching products:', error);
+        // toast.error('Error al cargar los productos');
       } finally {
         setLoading(false);
       }

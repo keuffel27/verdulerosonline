@@ -15,6 +15,26 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
+const checkConnection = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('measurement_units')
+      .select('count')
+      .limit(1)
+      .single();
+
+    if (error) {
+      console.error('Error checking connection:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Connection check failed:', error);
+    return false;
+  }
+};
+
 export const LoginForm: React.FC = () => {
   const signIn = useAuthStore((state) => state.signIn);
   const navigate = useNavigate();
@@ -32,53 +52,93 @@ export const LoginForm: React.FC = () => {
   const onSubmit = async (data: LoginFormData) => {
     try {
       setIsLoading(true);
+      console.log('Verificando conexión...');
+      
+      // Verificar la conexión antes de intentar el login
+      const isConnected = await checkConnection();
+      if (!isConnected) {
+        throw new Error('connection_error');
+      }
+
       console.log('Iniciando sesión con:', data.email);
       
-      // Primero verificamos si existe la tienda
-      const { data: storeData, error: storeError } = await supabase
+      // Primero autenticamos al usuario
+      const signInResult = await signIn(data.email, data.password);
+      if (!signInResult) {
+        throw new Error('invalid_credentials');
+      }
+
+      // Una vez autenticado, buscamos la tienda con timeout
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('timeout')), 30000);
+      });
+
+      const storePromise = supabase
         .from('stores')
-        .select('*')  // Seleccionamos todos los campos para ver qué hay
+        .select('id, name, status')
         .eq('owner_email', data.email)
         .single();
+
+      const { data: storeData, error: storeError } = await Promise.race([
+        storePromise,
+        timeoutPromise
+      ]) as any;
 
       console.log('Resultado de búsqueda de tienda:', { storeData, storeError });
 
       if (storeError) {
-        console.error('Error específico al buscar tienda:', storeError);
-        throw new Error('No se encontró la tienda asociada a este email');
+        if (storeError.code === 'PGRST116') {
+          await supabase.auth.signOut();
+          throw new Error('no_store_found');
+        }
+        throw storeError;
       }
 
       if (!storeData) {
-        console.error('No se encontraron datos de tienda para:', data.email);
-        throw new Error('No se encontró la tienda asociada a este email');
+        await supabase.auth.signOut();
+        throw new Error('no_store_found');
       }
 
-      // Si la tienda existe, procedemos con el login
-      const signInResult = await signIn(data.email, data.password);
-      if (!signInResult) {
-        throw new Error('Error al iniciar sesión');
+      if (storeData.status !== 'active') {
+        await supabase.auth.signOut();
+        throw new Error('store_inactive');
       }
 
       console.log('Sesión iniciada correctamente');
       toast.success('¡Bienvenido!');
       
-      // Redirigimos al panel de la tienda con el ID correcto
       navigate(`/store/${storeData.id}/panel/appearance`);
     } catch (error) {
       console.error('Error al iniciar sesión:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Error al iniciar sesión';
       
-      if (errorMessage.toLowerCase().includes('no se encontró la tienda')) {
-        toast.error('No hay una tienda asociada a este email');
-      } else if (errorMessage.toLowerCase().includes('invalid login credentials') || 
-                 errorMessage.toLowerCase().includes('invalid email')) {
-        setError('email', { message: 'Credenciales inválidas' });
-        setError('password', { message: 'Credenciales inválidas' });
-        toast.error('Email o contraseña incorrectos');
-      } else if (errorMessage.toLowerCase().includes('network')) {
-        toast.error('Error de conexión. Por favor, verifica tu conexión a internet.');
+      if (error instanceof Error) {
+        switch (error.message) {
+          case 'connection_error':
+            toast.error('Error de conexión con el servidor. Por favor, verifica tu conexión a internet.');
+            break;
+          case 'timeout':
+            toast.error('La conexión ha excedido el tiempo de espera. Por favor, intenta nuevamente.');
+            break;
+          case 'no_store_found':
+            toast.error('No hay una tienda asociada a este email');
+            break;
+          case 'store_inactive':
+            toast.error('Tu tienda está inactiva. Por favor, contacta con soporte.');
+            break;
+          case 'invalid_credentials':
+            setError('email', { message: 'Credenciales inválidas' });
+            setError('password', { message: 'Credenciales inválidas' });
+            toast.error('Email o contraseña incorrectos');
+            break;
+          default:
+            if (error.message.toLowerCase().includes('network')) {
+              toast.error('Error de conexión. Por favor, verifica tu conexión a internet.');
+            } else {
+              toast.error('Error al iniciar sesión. Por favor, intenta nuevamente.');
+            }
+        }
       } else {
-        toast.error(errorMessage);
+        toast.error('Error al iniciar sesión. Por favor, intenta nuevamente.');
       }
     } finally {
       setIsLoading(false);

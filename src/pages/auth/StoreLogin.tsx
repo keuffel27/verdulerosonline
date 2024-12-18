@@ -36,99 +36,42 @@ export const StoreLogin = () => {
       // 1. Cerrar cualquier sesión existente primero
       await supabase.auth.signOut();
 
-      // 2. Iniciar sesión con las nuevas credenciales
-      const { data: { session }, error: authError } = await supabase.auth.signInWithPassword({
+      // 2. Iniciar sesión con las nuevas credenciales y obtener la sesión
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       });
 
-      if (authError) {
-        console.error('Error de autenticación:', authError);
-        throw new Error('Email o contraseña incorrectos');
-      }
+      if (authError) throw authError;
+      if (!authData.session) throw new Error('No se pudo iniciar sesión');
 
-      if (!session) {
-        throw new Error('No se pudo iniciar sesión');
-      }
+      // 3. Verificar y renovar el token si es necesario
+      const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) throw refreshError;
+      if (!session) throw new Error('No se pudo renovar la sesión');
 
-      // 3. Configurar el cliente de Supabase con el nuevo token
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error('No se pudo obtener la información del usuario');
-      }
-
-      // 4. Buscar la tienda con el nuevo token
+      // 4. Buscar la tienda con el token renovado
       const { data: store, error: storeError } = await supabase
         .from('stores')
-        .select(`
-          id,
-          name,
-          owner_email,
-          subscription_status,
-          access_code,
-          status
-        `)
-        .eq('owner_id', user.id)
+        .select('*')
+        .eq('owner_id', session.user.id)
         .single();
 
-      if (storeError) {
-        console.error('Error al obtener tienda:', storeError);
-        await supabase.auth.signOut();
-        throw new Error('No se encontró una tienda asociada a este usuario');
-      }
-
-      if (!store) {
-        await supabase.auth.signOut();
-        throw new Error('No se encontró una tienda asociada a este usuario');
-      }
+      if (storeError) throw storeError;
+      if (!store) throw new Error('No se encontró una tienda asociada');
 
       // 5. Verificar estado de la tienda
       if (store.status === 'inactive') {
-        await supabase.auth.signOut();
-        throw new Error('Esta tienda está desactivada. Por favor, contacta con soporte.');
+        throw new Error('Esta tienda está desactivada');
       }
 
-      // 6. Verificar estado de suscripción
-      if (store.subscription_status === 'expired') {
-        throw new Error('Tu período de prueba ha expirado. Por favor, contacta con soporte.');
-      }
+      // 6. Redirigir al dashboard
+      navigate('/dashboard');
+      toast.success('¡Bienvenido de vuelta!');
 
-      if (store.subscription_status === 'cancelled') {
-        throw new Error('Tu suscripción ha sido cancelada. Por favor, contacta con soporte.');
-      }
-
-      // 7. Guardar información relevante
-      const storeData: StoreData = {
-        id: store.id,
-        name: store.name,
-        owner_email: store.owner_email,
-        subscription_status: store.subscription_status,
-        access_code: store.access_code,
-        status: store.status
-      };
-
-      // 8. Guardar la información de la sesión y la tienda
-      localStorage.setItem('store', JSON.stringify(storeData));
-      localStorage.setItem('session', JSON.stringify(session));
-
-      // 9. Configurar el evento de renovación de sesión
-      supabase.auth.onAuthStateChange((event, session) => {
-        if (session) {
-          localStorage.setItem('session', JSON.stringify(session));
-        } else {
-          localStorage.removeItem('session');
-          localStorage.removeItem('store');
-        }
-      });
-
-      // 10. Redirigir al panel
-      toast.success('¡Bienvenido!');
-      navigate(`/store/${store.id}/panel`);
-      
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error en login:', error);
-      toast.error(error instanceof Error ? error.message : 'Error al iniciar sesión');
+      toast.error(error.message || 'Error al iniciar sesión');
     } finally {
       setIsLoading(false);
     }

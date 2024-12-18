@@ -10,6 +10,8 @@ BEGIN
         DROP POLICY IF EXISTS "Users can view their store's WhatsApp connection" ON whatsapp_connections;
         DROP POLICY IF EXISTS "Users can update their store's WhatsApp connection" ON whatsapp_connections;
         DROP POLICY IF EXISTS "Users can insert their store's WhatsApp connection" ON whatsapp_connections;
+        DROP POLICY IF EXISTS "Allow read access to measurement_units for all authenticated us" ON measurement_units;
+        DROP POLICY IF EXISTS "Allow read access to measurement_units for all authenticated users" ON measurement_units;
     EXCEPTION 
         WHEN undefined_table THEN 
             NULL;
@@ -363,11 +365,11 @@ CREATE POLICY "Enable insert for authenticated users only"
     ON stores FOR INSERT 
     WITH CHECK (auth.uid() = owner_id);
 
-CREATE POLICY "Enable read access for authenticated users" 
+CREATE POLICY "Enable read access for store owners and active stores" 
     ON stores FOR SELECT 
     USING (
         auth.uid() = owner_id OR 
-        status = 'active'  -- Permite ver tiendas activas a todos los usuarios autenticados
+        (status = 'active' AND owner_email = current_user)  -- Solo permite ver la tienda activa al dueño del email
     );
 
 CREATE POLICY "Enable update for store owners only" 
@@ -380,9 +382,6 @@ CREATE POLICY "Enable delete for store owners only"
     USING (auth.uid() = owner_id);
 
 -- Crear políticas
-CREATE POLICY "Users can view their own store" ON stores
-    FOR SELECT USING (owner_id = auth.uid());
-
 CREATE POLICY "Users can update their own store" ON stores
     FOR UPDATE USING (owner_id = auth.uid());
 
@@ -412,6 +411,9 @@ CREATE POLICY "Users can delete their store categories" ON store_categories
     FOR DELETE USING (
         EXISTS (SELECT 1 FROM stores WHERE id = store_id AND owner_id = auth.uid())
     );
+
+CREATE POLICY "Store categories are viewable by everyone" ON store_categories
+    FOR SELECT USING (true);
 
 CREATE POLICY "Products are viewable by everyone" ON store_products
     FOR SELECT USING (true);
@@ -497,23 +499,13 @@ CREATE POLICY "Users can update their store social media" ON store_social_media
     );
 
 -- Políticas para measurement_units
+DROP POLICY IF EXISTS "Allow read access to measurement_units for all authenticated us" ON measurement_units;
+DROP POLICY IF EXISTS "Allow read access to measurement_units for all authenticated users" ON measurement_units;
+
 CREATE POLICY "Allow read access to measurement_units for all authenticated users"
-    ON measurement_units
-    FOR SELECT
+    ON measurement_units FOR SELECT
     TO authenticated
     USING (true);
-
-CREATE POLICY "Allow insert to measurement_units for authenticated users only"
-    ON measurement_units
-    FOR INSERT
-    TO authenticated
-    WITH CHECK (auth.role() = 'authenticated');
-
-CREATE POLICY "Allow update to measurement_units for authenticated users only"
-    ON measurement_units
-    FOR UPDATE
-    TO authenticated
-    USING (auth.role() = 'authenticated');
 
 -- Políticas de seguridad para whatsapp_connections
 CREATE POLICY "Users can view their store's WhatsApp connection"

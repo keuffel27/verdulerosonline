@@ -20,6 +20,40 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: true,
     storage: window.localStorage
+  },
+  global: {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  },
+  db: {
+    schema: 'public'
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 2
+    }
+  },
+  // Configuración para manejar timeouts y reintentos
+  fetch: (url, options = {}) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos de timeout
+
+    return fetch(url, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        ...options.headers,
+        'Cache-Control': 'no-cache',
+      },
+    })
+      .finally(() => clearTimeout(timeoutId))
+      .catch(error => {
+        if (error.name === 'AbortError') {
+          throw new Error('La conexión ha excedido el tiempo de espera. Por favor, intenta nuevamente.');
+        }
+        throw error;
+      });
   }
 });
 
@@ -28,25 +62,62 @@ supabase.auth.onAuthStateChange((event, session) => {
   console.log('Supabase auth event:', event);
   if (session) {
     console.log('User authenticated:', session.user.id);
-    // Guardar la sesión en localStorage
-    window.localStorage.setItem('supabase.auth.token', session.access_token);
-    window.localStorage.setItem('supabase.auth.user', JSON.stringify(session.user));
+    // Guardar la sesión en localStorage de manera segura
+    try {
+      window.localStorage.setItem('supabase.auth.token', session.access_token);
+      window.localStorage.setItem('supabase.auth.user', JSON.stringify(session.user));
+    } catch (error) {
+      console.error('Error saving session to localStorage:', error);
+    }
   } else {
     console.log('No session found');
     // Limpiar la sesión del localStorage
-    window.localStorage.removeItem('supabase.auth.token');
-    window.localStorage.removeItem('supabase.auth.user');
+    try {
+      window.localStorage.removeItem('supabase.auth.token');
+      window.localStorage.removeItem('supabase.auth.user');
+    } catch (error) {
+      console.error('Error removing session from localStorage:', error);
+    }
   }
 });
 
-// Función para verificar si hay una sesión activa
+// Función para verificar si hay una sesión activa con manejo de errores mejorado
 export const getSession = async () => {
-  const { data: { session }, error } = await supabase.auth.getSession();
-  if (error) {
-    console.error('Error getting session:', error.message);
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) {
+      console.error('Error getting session:', error.message);
+      return null;
+    }
+    return session;
+  } catch (error) {
+    console.error('Unexpected error getting session:', error);
     return null;
   }
-  return session;
+};
+
+// Función para verificar el estado de la conexión
+export const checkConnection = async () => {
+  try {
+    const start = Date.now();
+    const { data, error } = await supabase
+      .from('stores')
+      .select('count')
+      .limit(1)
+      .single();
+    
+    const latency = Date.now() - start;
+    console.log(`Supabase connection latency: ${latency}ms`);
+
+    if (error) {
+      console.error('Connection check error:', error);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('Connection check failed:', error);
+    return false;
+  }
 };
 
 // Exportar tipos útiles

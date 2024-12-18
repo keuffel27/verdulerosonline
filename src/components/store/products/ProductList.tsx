@@ -6,8 +6,12 @@ import type { Database } from '../../../lib/database.types';
 import { ProductCard } from './ProductCard';
 import { useCart } from '../../../hooks/useCart';
 
-type Product = Database['public']['Tables']['store_products']['Row'];
-type Category = Database['public']['Tables']['store_categories']['Row'];
+type Product = Database['public']['Tables']['store_products']['Row'] & {
+  presentations: (Database['public']['Tables']['product_presentations']['Row'] & {
+    unit: Database['public']['Tables']['measurement_units']['Row']
+  })[];
+  category?: Database['public']['Tables']['store_categories']['Row'];
+};
 
 interface Props {
   storeId: string;
@@ -15,7 +19,7 @@ interface Props {
 
 export const ProductList: React.FC<Props> = ({ storeId }) => {
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Database['public']['Tables']['store_categories']['Row'][]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { addToCart } = useCart();
@@ -33,12 +37,16 @@ export const ProductList: React.FC<Props> = ({ storeId }) => {
         if (categoriesError) throw categoriesError;
         setCategories(categoriesData || []);
 
-        // Fetch products
+        // Fetch products with presentations and units
         const { data: productsData, error: productsError } = await supabase
           .from('store_products')
           .select(`
             *,
-            category:store_categories(*)
+            category:store_categories(*),
+            presentations:product_presentations(
+              *,
+              unit:measurement_units(*)
+            )
           `)
           .eq('store_id', storeId)
           .eq('status', 'active')
@@ -78,6 +86,19 @@ export const ProductList: React.FC<Props> = ({ storeId }) => {
     };
   }, [storeId]);
 
+  const handleAddToCart = (product: Product, presentationId: string, quantity: number) => {
+    const presentation = product.presentations.find(p => p.id === presentationId);
+    if (!presentation) return;
+
+    addToCart({
+      product,
+      presentation,
+      quantity
+    });
+
+    toast.success('Producto agregado al carrito');
+  };
+
   const filteredProducts = selectedCategory
     ? products.filter(product => product.category_id === selectedCategory)
     : products;
@@ -102,7 +123,7 @@ export const ProductList: React.FC<Props> = ({ storeId }) => {
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
-          Todos
+          Todas las categorías
         </button>
         {categories.map((category) => (
           <button
@@ -120,19 +141,21 @@ export const ProductList: React.FC<Props> = ({ storeId }) => {
       </div>
 
       {/* Products Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {filteredProducts.map((product) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-            onAddToCart={(quantity) => addToCart(product, quantity)}
-          />
-        ))}
-      </div>
-
-      {filteredProducts.length === 0 && (
+      {filteredProducts.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
-          No hay productos disponibles en esta categoría.
+          No hay productos disponibles en esta categoría
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredProducts.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              onAddToCart={(presentationId, quantity) => 
+                handleAddToCart(product, presentationId, quantity)
+              }
+            />
+          ))}
         </div>
       )}
     </div>

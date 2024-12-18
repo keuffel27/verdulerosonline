@@ -1,112 +1,66 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Minus, Plus } from 'lucide-react';
 
 interface Props {
-  price: number;
-  unitType: 'kg' | 'lb';
-  minQuantity?: number;
-  maxQuantity?: number | null;
-  quantityStep?: number;
-  onQuantityChange: (quantity: number, totalPrice: number) => void;
+  quantity: number;
+  onChange: (value: number) => void;
+  max?: number;
+  disabled?: boolean;
 }
 
 export const ProductQuantitySelector: React.FC<Props> = ({
-  price,
-  unitType,
-  minQuantity = 0.1,
-  maxQuantity = null,
-  quantityStep = 0.1,
-  onQuantityChange,
+  quantity,
+  onChange,
+  max,
+  disabled = false,
 }) => {
-  const [quantity, setQuantity] = useState(minQuantity);
-  const [displayUnit, setDisplayUnit] = useState<'kg' | 'lb' | 'g'>(unitType);
-
-  // Convertir la cantidad a la unidad de display
-  const getDisplayQuantity = (qty: number): number => {
-    if (displayUnit === 'g' && (unitType === 'kg' || unitType === 'lb')) {
-      return qty * (unitType === 'kg' ? 1000 : 453.592);
-    }
-    if (displayUnit === 'lb' && unitType === 'kg') {
-      return qty * 2.20462;
-    }
-    if (displayUnit === 'kg' && unitType === 'lb') {
-      return qty * 0.453592;
-    }
-    return qty;
-  };
-
-  // Convertir la cantidad de display a la unidad base
-  const getBaseQuantity = (displayQty: number): number => {
-    if (displayUnit === 'g' && (unitType === 'kg' || unitType === 'lb')) {
-      return displayQty / (unitType === 'kg' ? 1000 : 453.592);
-    }
-    if (displayUnit === 'lb' && unitType === 'kg') {
-      return displayQty * 0.453592;
-    }
-    if (displayUnit === 'kg' && unitType === 'lb') {
-      return displayQty * 2.20462;
-    }
-    return displayQty;
-  };
-
-  const handleQuantityChange = (newQuantity: number) => {
-    const baseQty = getBaseQuantity(newQuantity);
-    if (baseQty >= minQuantity && (!maxQuantity || baseQty <= maxQuantity)) {
-      setQuantity(baseQty);
-      const totalPrice = baseQty * price;
-      onQuantityChange(baseQty, totalPrice);
-    }
-  };
-
-  const toggleUnit = () => {
-    if (displayUnit === 'kg') {
-      setDisplayUnit('g');
-    } else if (displayUnit === 'g') {
-      setDisplayUnit(unitType === 'kg' ? 'kg' : 'lb');
-    } else if (displayUnit === 'lb') {
-      setDisplayUnit('g');
-    }
-  };
-
-  const formatQuantity = (qty: number): string => {
-    const displayQty = getDisplayQuantity(qty);
-    return displayQty.toFixed(displayUnit === 'g' ? 0 : 3);
+  const handleChange = (value: number) => {
+    if (disabled) return;
+    if (value < 1) return;
+    if (max !== undefined && value > max) return;
+    onChange(value);
   };
 
   return (
-    <div className="flex items-center space-x-2">
+    <div className="flex items-center space-x-1">
       <button
-        onClick={() => handleQuantityChange(getDisplayQuantity(quantity) - getDisplayQuantity(quantityStep))}
-        className="p-1 rounded-full hover:bg-gray-100"
-        disabled={quantity <= minQuantity}
+        type="button"
+        onClick={() => handleChange(quantity - 1)}
+        disabled={disabled || quantity <= 1}
+        className={`p-1 rounded-md transition-colors ${
+          disabled || quantity <= 1
+            ? 'text-gray-300 cursor-not-allowed'
+            : 'text-gray-500 hover:bg-gray-100'
+        }`}
       >
-        <Minus className="h-4 w-4" />
+        <Minus className="w-4 h-4" />
       </button>
 
-      <div className="flex items-center space-x-1">
-        <input
-          type="number"
-          value={formatQuantity(quantity)}
-          onChange={(e) => handleQuantityChange(parseFloat(e.target.value) || 0)}
-          className="w-20 text-center border rounded-md px-2 py-1"
-          step={getDisplayQuantity(quantityStep)}
-          min={getDisplayQuantity(minQuantity)}
-          max={maxQuantity ? getDisplayQuantity(maxQuantity) : undefined}
-        />
-        <button
-          onClick={toggleUnit}
-          className="px-2 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200"
-        >
-          {displayUnit}
-        </button>
-      </div>
+      <input
+        type="number"
+        min="1"
+        max={max}
+        value={quantity}
+        onChange={(e) => handleChange(parseInt(e.target.value) || 1)}
+        disabled={disabled}
+        className={`w-12 text-center rounded border ${
+          disabled
+            ? 'border-gray-200 bg-gray-50 text-gray-400'
+            : 'border-gray-300 text-gray-900'
+        }`}
+      />
 
       <button
-        onClick={() => handleQuantityChange(getDisplayQuantity(quantity) + getDisplayQuantity(quantityStep))}
-        className="p-1 rounded-full hover:bg-gray-100"
-        disabled={maxQuantity ? quantity >= maxQuantity : false}
+        type="button"
+        onClick={() => handleChange(quantity + 1)}
+        disabled={disabled || (max !== undefined && quantity >= max)}
+        className={`p-1 rounded-md transition-colors ${
+          disabled || (max !== undefined && quantity >= max)
+            ? 'text-gray-300 cursor-not-allowed'
+            : 'text-gray-500 hover:bg-gray-100'
+        }`}
       >
-        <Plus className="h-4 w-4" />
+        <Plus className="w-4 h-4" />
       </button>
     </div>
   );

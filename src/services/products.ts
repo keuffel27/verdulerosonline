@@ -71,11 +71,19 @@ export const createProduct = async (input: CreateProductInput): Promise<ProductW
       category_id: categoryId,
       image_url: imageUrl,
       order_index: newOrderIndex,
+      status: 'active'
     })
     .select()
     .single();
 
-  if (productError) throw productError;
+  if (productError) {
+    console.error('Error creating product:', productError);
+    throw productError;
+  }
+
+  if (!product) {
+    throw new Error('No se pudo crear el producto');
+  }
 
   // Create the presentations
   const presentationPromises = presentations.map(presentation => 
@@ -89,10 +97,21 @@ export const createProduct = async (input: CreateProductInput): Promise<ProductW
         sale_price: presentation.salePrice,
         stock: presentation.stock ?? 0,
         is_default: presentation.isDefault ?? false,
+        status: 'active'
       })
   );
 
-  await Promise.all(presentationPromises);
+  try {
+    await Promise.all(presentationPromises);
+  } catch (error) {
+    console.error('Error creating presentations:', error);
+    // Si falla la creación de presentaciones, eliminamos el producto
+    await supabase
+      .from('store_products')
+      .delete()
+      .eq('id', product.id);
+    throw error;
+  }
 
   return await getProductById(product.id);
 };

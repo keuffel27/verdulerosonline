@@ -1,48 +1,39 @@
-export interface Category {
-  id: string;
-  store_id: string;
-  name: string;
-  description?: string;
-  image_url?: string;
-  order_index: number;
-  created_at?: string;
-}
+import type { Database } from '../lib/database.types';
 
-export interface Product {
-  id: string;
-  store_id: string;
-  name: string;
-  description?: string;
-  price: number;
-  stock: number;
-  unit: string;
-  category_id?: string;
-  image_url?: string;
-  status: 'active' | 'inactive';
-  package_sizes: string[];
-  category?: Category;
-  created_at?: string;
-}
+export type Product = Database['public']['Tables']['store_products']['Row'] & {
+  presentations: (Database['public']['Tables']['product_presentations']['Row'] & {
+    unit: Database['public']['Tables']['measurement_units']['Row']
+  })[];
+  category?: Database['public']['Tables']['store_categories']['Row'];
+};
 
-export interface Store {
-  id: string;
-  name: string;
-  slug: string;
-  owner_id: string;
-  owner_name: string;
-  owner_email: string;
-  status: 'active' | 'inactive';
-  subscription_status: 'trial' | 'active' | 'expired' | 'cancelled';
-  trial_start_date: string;
-  created_at?: string;
-  updated_at?: string;
-}
+export type Category = Database['public']['Tables']['store_categories']['Row'];
 
-export interface StoreConfig {
+export type Store = Database['public']['Tables']['stores']['Row'] & {
+  store_social_media?: {
+    instagram_url?: string;
+    facebook_url?: string;
+    whatsapp_number?: string;
+  };
+};
+
+export type StoreConfig = {
   name: string;
   logo?: string;
   background?: string;
-  schedule: WeekSchedule;
+  schedule: {
+    [key: string]: {
+      isOpen: boolean;
+      morning: {
+        open: string;
+        close: string;
+      };
+      afternoon: {
+        open: string;
+        close: string;
+      };
+    };
+  };
   delivery: {
     available: boolean;
     minAmount: number;
@@ -52,29 +43,14 @@ export interface StoreConfig {
       fee: number;
     }[];
   };
-}
-
-export interface DaySchedule {
-  isOpen: boolean;
-  morning: {
-    open: string;
-    close: string;
-  };
-  afternoon: {
-    open: string;
-    close: string;
-  };
-}
-
-export interface WeekSchedule {
-  [key: string]: DaySchedule;
-}
+};
 
 export interface CartItem {
   product: Product;
+  presentation: Database['public']['Tables']['product_presentations']['Row'] & {
+    unit: Database['public']['Tables']['measurement_units']['Row']
+  };
   quantity: number;
-  size: string;
-  notes?: string;
 }
 
 export interface CustomerInfo {
@@ -91,9 +67,9 @@ export interface CartState {
 }
 
 export interface CartActions {
-  addItem: (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => void;
-  removeItem: (productId: string, size: string) => void;
-  updateQuantity: (productId: string, size: string, quantity: number) => void;
+  addItem: (item: CartItem) => void;
+  removeItem: (productId: string, presentationId: string) => void;
+  updateQuantity: (productId: string, presentationId: string, quantity: number) => void;
   updateCustomerInfo: (info: Partial<CustomerInfo>) => void;
   clearCart: () => void;
   getTotal: () => number;
