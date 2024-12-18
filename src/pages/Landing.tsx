@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Store,
   Menu,
   X as CloseIcon,
   ShoppingCart,
@@ -13,6 +12,7 @@ import {
   Scale,
   BarChart3
 } from 'lucide-react';
+import { Logo } from '../components/ui/Logo';
 
 const Landing = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -41,6 +41,7 @@ const Landing = () => {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
+              <Logo className="w-20 h-20" />
               <span className="text-2xl font-bold text-green-600">Verduleros Online</span>
             </div>
             

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Store, LayoutDashboard, Plus, Home } from 'lucide-react';
+import { LayoutDashboard, Plus, Home } from 'lucide-react';
 
 export const AdminLayout: React.FC = () => {
   const location = useLocation();
@@ -14,8 +14,12 @@ export const AdminLayout: React.FC = () => {
       {/* Sidebar */}
       <aside className="w-64 bg-white shadow-md">
         <div className="p-4 border-b">
-          <div className="flex items-center space-x-2">
-            <Store className="w-6 h-6 text-green-600" />
+          <div className="flex items-center space-x-3">
+            <img 
+              src="/src/assets/images/logo/verdulogo.webp" 
+              alt="Verduleros Online Logo" 
+              className="w-12 h-12 object-contain"
+            />
             <span className="font-bold text-xl">Verduleros Online</span>
           </div>
         </div>
@@ -43,7 +47,7 @@ export const AdminLayout: React.FC = () => {
                     : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                <Store className="w-5 h-5" />
+                <LayoutDashboard className="w-5 h-5" />
                 <span>Tiendas</span>
               </Link>
             </li>

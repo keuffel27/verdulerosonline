@@ -2,21 +2,19 @@ import React, { useState } from 'react';
 import { useParams, Link, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
-  Store,
-  Settings,
-  Clock,
+  Menu,
+  X as CloseIcon,
+  ShoppingBag,
   Image,
   Share2,
-  ShoppingBag,
+  Clock,
+  Settings,
   LayoutGrid,
   Eye,
   EyeOff,
   Copy,
   ExternalLink,
   Check,
-  Menu,
-  X as XIcon,
-  ChevronLeft,
 } from 'lucide-react';
 import { BackButton } from '../../components/ui/BackButton';
 import { StorePreview } from '../../components/store/StorePreview';
@@ -135,7 +133,11 @@ const StorePanel: React.FC = () => {
             {/* Sidebar Header */}
             <div className="flex items-center justify-between h-16 px-4 border-b">
               <div className="flex items-center">
-                <Store className="h-8 w-8 text-green-600" />
+                <img 
+                  src="/src/assets/images/logo/verdulogo.webp" 
+                  alt="Verduleros Online Logo" 
+                  className="w-20 h-20 object-contain"
+                />
                 <span className="ml-2 text-lg font-semibold text-gray-800">
                   Panel de Tienda
                 </span>
@@ -144,7 +146,7 @@ const StorePanel: React.FC = () => {
                 onClick={() => setSidebarOpen(false)}
                 className="text-gray-500 hover:text-gray-700"
               >
-                <XIcon className="h-6 w-6" />
+                <CloseIcon className="h-6 w-6" />
               </button>
             </div>
 
@@ -207,7 +209,11 @@ const StorePanel: React.FC = () => {
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
         <div className="flex-1 flex flex-col min-h-0 bg-white border-r">
           <div className="flex items-center h-16 flex-shrink-0 px-4 border-b">
-            <Store className="h-8 w-8 text-green-600" />
+            <img 
+              src="/src/assets/images/logo/verdulogo.webp" 
+              alt="Verduleros Online Logo" 
+              className="w-20 h-20 object-contain"
+            />
             <span className="ml-2 text-lg font-semibold text-gray-800">
               Panel de Tienda
             </span>

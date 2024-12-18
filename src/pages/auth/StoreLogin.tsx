@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Store } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { supabase } from '../../services/supabase';
 
@@ -81,7 +80,13 @@ export const StoreLogin = () => {
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md mx-auto">
         <div className="text-center mb-8">
-          <Store className="mx-auto h-12 w-12 text-green-600" />
+          <div className="flex justify-center">
+            <img 
+              src="/src/assets/images/logo/verdulogo.webp" 
+              alt="Verduleros Online Logo" 
+              className="w-32 h-32 object-contain"
+            />
+          </div>
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
             Inicia sesión en tu tienda
           </h2>

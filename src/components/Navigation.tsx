@@ -10,8 +10,12 @@ export const Navigation: React.FC = () => {
     <nav className="bg-white shadow-md">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center space-x-2">
-            <Store className="w-6 h-6 text-green-600" />
+          <Link to="/" className="flex items-center space-x-3">
+            <img 
+              src="/src/assets/images/logo/verdulogo.webp" 
+              alt="Verduleros Online Logo" 
+              className="w-12 h-12 object-contain"
+            />
             <span className="font-bold text-xl">Verduleros Online</span>
           </Link>
           <Link

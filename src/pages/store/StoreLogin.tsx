@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { Store, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { getStoreByEmail, getStoreById, StoreError } from '../../services/stores';
 import { BackButton } from '../../components/ui/BackButton';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { Logo } from '../../components/ui/Logo';
 
 export const StoreLogin: React.FC = () => {
   const navigate = useNavigate();
@@ -96,7 +97,7 @@ export const StoreLogin: React.FC = () => {
   if (storeId && error) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center p-4">
-        <Store className="w-12 h-12 text-red-600 mb-4" />
+        <Logo className="w-20 h-20 text-red-600 mb-4" />
         <h2 className="text-xl font-semibold text-gray-900 mb-2">Error</h2>
         <p className="text-gray-600 text-center mb-4">{error}</p>
         <button
@@ -116,7 +117,7 @@ export const StoreLogin: React.FC = () => {
           <BackButton to="/" />
         </div>
         <div className="flex justify-center">
-          <Store className="w-12 h-12 text-green-600" />
+          <Logo className="w-20 h-20" />
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
           {storeName ? `Acceso a ${storeName}` : 'Acceso a tu Tienda'}
