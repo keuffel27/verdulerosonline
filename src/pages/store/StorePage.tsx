@@ -19,6 +19,7 @@ export default function StorePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
+  const [appearance, setAppearance] = useState<Store['store_appearance'] | null>(null);
   const { addToCart } = useCart();
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export default function StorePage() {
 
       if (error) throw error;
       setStore(storeData);
+      setAppearance(storeData.store_appearance);
     } catch (error) {
       console.error('Error fetching store:', error);
     }
@@ -141,17 +143,34 @@ export default function StorePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Banner */}
+      <div className="relative w-full h-64 bg-gray-200">
+        {appearance?.banner_url && (
+          <img
+            src={appearance.banner_url}
+            alt="Banner de la tienda"
+            className="w-full h-full object-cover"
+          />
+        )}
+      </div>
+
       {/* Store Header */}
       <div className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col items-center justify-center text-center max-w-2xl mx-auto">
             {/* Logo */}
             <div className="w-32 h-32 rounded-full bg-white shadow-lg flex items-center justify-center mb-4 overflow-hidden">
-              <img 
-                src={store.logo_url || '/default-store-logo.png'} 
-                alt={`${store.name} logo`}
-                className="w-full h-full object-cover"
-              />
+              {appearance?.logo_url ? (
+                <img 
+                  src={appearance.logo_url} 
+                  alt={`${store.name} logo`}
+                  className="w-full h-full object-contain bg-white"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                  <span className="text-gray-400">Sin logo</span>
+                </div>
+              )}
             </div>
 
             {/* Store Name */}

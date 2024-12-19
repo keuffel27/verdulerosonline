@@ -264,8 +264,8 @@ CREATE TABLE store_appearance (
     store_id TEXT PRIMARY KEY REFERENCES stores(id) ON DELETE CASCADE,
     logo_url TEXT,
     banner_url TEXT,
-    primary_color TEXT,
-    secondary_color TEXT,
+    store_address TEXT,
+    welcome_text TEXT DEFAULT 'Bienvenidos a nuestra tienda online',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );

@@ -6,7 +6,7 @@ import { CategoryGrid } from '../components/store/CategoryGrid';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-toastify';
 import type { Product, Category, Store } from '../types/store';
-import { Instagram, Facebook, MessageCircle, Clock } from 'lucide-react';
+import { Instagram, Facebook, MessageCircle, Clock, MapPin } from 'lucide-react';
 import { useCart } from '../hooks/useCart';
 
 export const StoreFront: React.FC = () => {
@@ -40,6 +40,8 @@ export const StoreFront: React.FC = () => {
             store_appearance (
               logo_url,
               banner_url,
+              store_address,
+              welcome_text,
               primary_color,
               secondary_color
             ),
@@ -175,46 +177,79 @@ export const StoreFront: React.FC = () => {
                   <div className="absolute inset-0 bg-gradient-to-r from-green-400/20 to-green-600/20 rounded-full blur-xl group-hover:blur-2xl transition-all duration-500"></div>
                   <img
                     src={store.store_appearance.logo_url}
-                    alt={store.name}
-                    className="relative w-full h-full object-contain rounded-full"
+                    alt={`${store.name} logo`}
+                    className="relative w-full h-full object-cover rounded-full border-2 border-white shadow-xl"
                   />
                 </div>
               ) : (
-                <div className="w-20 h-20 sm:w-24 sm:h-24 mb-3 bg-gradient-to-r from-green-400 to-green-600 rounded-full flex items-center justify-center">
-                  <span className="text-2xl sm:text-3xl font-bold text-white">
-                    {store?.name?.[0]?.toUpperCase()}
-                  </span>
+                <div className="w-20 h-20 sm:w-24 sm:h-24 mb-3 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
+                  <Store className="w-12 h-12 text-green-600" />
                 </div>
               )}
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{store?.name}</h1>
-              {store?.description && (
-                <p className="mt-1 text-sm sm:text-base text-gray-600 max-w-md">{store.description}</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{store.name}</h1>
+              
+              {/* Mensaje de Bienvenida */}
+              {store?.store_appearance?.welcome_text && (
+                <p className="mt-2 text-gray-600 italic text-center md:text-left">
+                  {store.store_appearance.welcome_text}
+                </p>
               )}
             </div>
 
-            {/* Estado de la tienda */}
-            <div className="flex flex-col items-center md:items-end space-y-2">
-              <div
-                className={`flex items-center space-x-2 px-4 py-2 rounded-full ${
-                  isOpen
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
-                }`}
-              >
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    isOpen ? 'bg-green-500' : 'bg-red-500'
-                  }`}
-                />
-                <span className="font-medium">
-                  {isOpen ? 'Abierto' : 'Cerrado'}
-                </span>
+            {/* Información de la Tienda */}
+            <div className="flex-1 flex flex-col items-center md:items-end space-y-2">
+              {/* Estado de la Tienda */}
+              <div className={`flex items-center ${isOpen ? 'text-green-600' : 'text-red-600'}`}>
+                <Clock className="w-4 h-4 mr-1" />
+                <span className="font-medium">{isOpen ? 'Abierto' : 'Cerrado'}</span>
+                {!isOpen && nextOpenTime && (
+                  <span className="text-gray-500 text-sm ml-2">
+                    (Abre en {nextOpenTime})
+                  </span>
+                )}
               </div>
-              {!isOpen && nextOpenTime && (
-                <p className="text-sm text-gray-500">
-                  Abre en {nextOpenTime}
-                </p>
+
+              {/* Dirección de la Tienda */}
+              {store?.store_appearance?.store_address && (
+                <div className="flex items-center text-gray-600">
+                  <MapPin className="w-4 h-4 mr-1" />
+                  <span>{store.store_appearance.store_address}</span>
+                </div>
               )}
+
+              {/* Redes Sociales */}
+              <div className="flex items-center space-x-3 mt-2">
+                {store?.store_social_media?.instagram_url && (
+                  <a
+                    href={store.store_social_media.instagram_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-pink-500 hover:text-pink-600 transition-colors"
+                  >
+                    <Instagram className="w-5 h-5" />
+                  </a>
+                )}
+                {store?.store_social_media?.facebook_url && (
+                  <a
+                    href={store.store_social_media.facebook_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-700 transition-colors"
+                  >
+                    <Facebook className="w-5 h-5" />
+                  </a>
+                )}
+                {store?.store_social_media?.whatsapp_number && (
+                  <a
+                    href={`https://wa.me/${store.store_social_media.whatsapp_number}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-green-500 hover:text-green-600 transition-colors"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         </div>

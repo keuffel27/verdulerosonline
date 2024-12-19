@@ -1,96 +1,84 @@
-import { useState, useEffect } from 'react';
-import { toast } from 'react-toastify';
-import {
-  StoreAppearance,
-  getStoreAppearance,
-  updateStoreAppearance,
-  uploadStoreImage,
-  deleteStoreImage,
-} from '../services/appearance';
+import { useEffect, useState, useCallback } from 'react';
+import { toast } from 'react-hot-toast';
+import { StoreAppearance } from '../types/store';
+import { supabase } from '../services/supabase';
 
 export function useStoreAppearance(storeId: string) {
   const [appearance, setAppearance] = useState<StoreAppearance | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadAppearance();
-  }, [storeId]);
-
-  async function loadAppearance() {
+  // Usar useCallback para la función loadAppearance
+  const loadAppearance = useCallback(async () => {
+    if (!storeId) return;
+    
     try {
-      const data = await getStoreAppearance(storeId);
+      setLoading(true);
+      setError(null);
+      
+      const { data, error: fetchError } = await supabase
+        .from('store_appearance')
+        .select('*')
+        .eq('store_id', storeId)
+        .single();
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
       setAppearance(data);
-    } catch (error) {
-      toast.error('Error al cargar la configuración de apariencia');
-      console.error(error);
+    } catch (err) {
+      console.error('Error loading appearance:', err);
+      setError(err instanceof Error ? err.message : 'Error al cargar la configuración');
+      toast.error('Error al cargar la configuración de la tienda');
     } finally {
       setLoading(false);
     }
-  }
+  }, [storeId]);
 
-  async function handleImageUpload(file: File, type: 'logo' | 'banner') {
+  // Cargar datos iniciales
+  useEffect(() => {
+    loadAppearance();
+  }, [loadAppearance]);
+
+  // Función para guardar cambios
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!appearance) return;
 
     try {
       setSaving(true);
-      // Si ya existe una imagen, eliminarla primero
-      const currentUrl = type === 'logo' ? appearance.logo_url : appearance.banner_url;
-      if (currentUrl) {
-        await deleteStoreImage(currentUrl);
-      }
+      setError(null);
 
-      // Subir la nueva imagen
-      const newUrl = await uploadStoreImage(storeId, file, type);
+      const { error: updateError } = await supabase
+        .from('store_appearance')
+        .upsert({
+          ...appearance,
+          store_id: storeId,
+          updated_at: new Date().toISOString()
+        });
 
-      // Actualizar en la base de datos
-      const update = type === 'logo' 
-        ? { logo_url: newUrl }
-        : { banner_url: newUrl };
+      if (updateError) throw updateError;
       
-      await updateStoreAppearance(storeId, update);
-
-      // Actualizar el estado local
-      setAppearance({ ...appearance, ...update });
-      toast.success(`${type === 'logo' ? 'Logo' : 'Banner'} actualizado correctamente`);
-    } catch (error) {
-      toast.error(`Error al subir el ${type === 'logo' ? 'logo' : 'banner'}`);
-      console.error(error);
+      toast.success('Cambios guardados con éxito');
+      await loadAppearance(); // Recargar datos después de guardar
+    } catch (err) {
+      console.error('Error saving appearance:', err);
+      setError(err instanceof Error ? err.message : 'Error al guardar los cambios');
+      toast.error('Error al guardar los cambios');
     } finally {
       setSaving(false);
     }
-  }
-
-  async function handleColorUpdate(colors: { primary?: string; secondary?: string }) {
-    if (!appearance) return;
-
-    try {
-      setSaving(true);
-      await updateStoreAppearance(storeId, {
-        primary_color: colors.primary || appearance.primary_color,
-        secondary_color: colors.secondary || appearance.secondary_color,
-      });
-
-      setAppearance({
-        ...appearance,
-        primary_color: colors.primary || appearance.primary_color,
-        secondary_color: colors.secondary || appearance.secondary_color,
-      });
-
-      toast.success('Colores actualizados correctamente');
-    } catch (error) {
-      toast.error('Error al actualizar los colores');
-      console.error(error);
-    } finally {
-      setSaving(false);
-    }
-  }
+  };
 
   return {
     appearance,
     loading,
     saving,
-    handleImageUpload,
-    handleColorUpdate,
+    error,
+    handleSubmit,
+    setAppearance,
+    loadAppearance // Asegurarnos de exportar loadAppearance
   };
 }

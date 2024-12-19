@@ -62,6 +62,16 @@ export interface Store {
   };
 }
 
+export interface StoreAppearance {
+  store_id: string;
+  logo_url?: string;
+  banner_url?: string;
+  store_address?: string;
+  welcome_text: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export type StoreConfig = {
   name: string;
   logo?: string;

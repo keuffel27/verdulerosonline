@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useParams, Link, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
@@ -18,14 +18,15 @@ import {
 } from 'lucide-react';
 import { BackButton } from '../../components/ui/BackButton';
 import { StorePreview } from '../../components/store/StorePreview';
+import { LogoUploader } from '../../components/store/LogoUploader';
 
 // Componentes de las diferentes secciones
-import StoreAppearance from './panels/StoreAppearance';
-import StoreSocialMedia from './panels/StoreSocialMedia';
-import StoreSchedule from './panels/StoreSchedule';
-import StoreCategories from './panels/StoreCategories';
-import StoreProducts from './panels/StoreProducts';
-import StoreSettings from './panels/StoreSettings';
+const StoreAppearance = React.lazy(() => import('./panels/StoreAppearance'));
+const StoreSocialMedia = React.lazy(() => import('./panels/StoreSocialMedia'));
+const StoreSchedule = React.lazy(() => import('./panels/StoreSchedule'));
+const StoreCategories = React.lazy(() => import('./panels/StoreCategories'));
+const StoreProducts = React.lazy(() => import('./panels/StoreProducts'));
+const StoreSettings = React.lazy(() => import('./panels/StoreSettings'));
 
 const StorePanel: React.FC = () => {
   const { storeId } = useParams<{ storeId: string }>();
@@ -275,7 +276,21 @@ const StorePanel: React.FC = () => {
         <main className="flex-1">
           <div className="py-6 px-4 sm:px-6 lg:px-8">
             <div className="pb-16 pt-20 lg:pt-0">
-              <Outlet />
+              <Suspense fallback={
+                <div className="flex justify-center items-center h-64">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
+                </div>
+              }>
+                <Routes>
+                  <Route path="/" element={<Navigate to="appearance" replace />} />
+                  <Route path="appearance" element={<StoreAppearance />} />
+                  <Route path="social" element={<StoreSocialMedia />} />
+                  <Route path="schedule" element={<StoreSchedule />} />
+                  <Route path="categories" element={<StoreCategories />} />
+                  <Route path="products" element={<StoreProducts />} />
+                  <Route path="settings" element={<StoreSettings />} />
+                </Routes>
+              </Suspense>
             </div>
           </div>
         </main>

@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { Maximize2, Minimize2, X, Smartphone, AlertCircle } from 'lucide-react';
+import React from 'react';
+import { Store } from '../../types/store';
+import { StoreAppearance } from '../../types/store';
 
 interface StorePreviewProps {
-  storeId: string;
+  store: Store;
+  appearance?: StoreAppearance | null;
   isVisible: boolean;
   isExpanded: boolean;
   onToggleVisibility: () => void;
@@ -10,23 +12,14 @@ interface StorePreviewProps {
 }
 
 export const StorePreview: React.FC<StorePreviewProps> = ({
-  storeId,
+  store,
+  appearance,
   isVisible,
   isExpanded,
   onToggleVisibility,
   onToggleExpand,
 }) => {
-  const [mobileView, setMobileView] = useState(false);
-  const [error, setError] = useState(false);
-
   if (!isVisible) return null;
-
-  // Asegurarnos de que la URL sea absoluta
-  const previewUrl = `${window.location.origin}/store/${storeId}`;
-
-  const handleIframeError = () => {
-    setError(true);
-  };
 
   return (
     <div
@@ -39,13 +32,11 @@ export const StorePreview: React.FC<StorePreviewProps> = ({
           <h2 className="text-lg font-semibold text-gray-800">Vista previa de la tienda</h2>
           <div className="flex items-center space-x-2">
             <button
-              onClick={() => setMobileView(!mobileView)}
-              className={`p-2 transition-colors ${
-                mobileView ? 'text-green-600' : 'text-gray-500 hover:text-gray-700'
-              }`}
-              title="Vista móvil"
+              onClick={onToggleVisibility}
+              className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
+              title="Cerrar vista previa"
             >
-              <Smartphone className="w-5 h-5" />
+              <X className="w-5 h-5" />
             </button>
             <button
               onClick={onToggleExpand}
@@ -58,48 +49,58 @@ export const StorePreview: React.FC<StorePreviewProps> = ({
                 <Maximize2 className="w-5 h-5" />
               )}
             </button>
-            <button
-              onClick={onToggleVisibility}
-              className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
-              title="Cerrar vista previa"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
         </div>
 
         {/* Preview */}
         <div className="flex-1 bg-gray-100 flex items-center justify-center p-4">
-          <div
-            className={`bg-white h-full transition-all duration-300 shadow-lg ${
-              mobileView
-                ? 'w-[375px] rounded-[2rem] overflow-hidden'
-                : 'w-full rounded-lg'
-            }`}
-          >
-            {error ? (
-              <div className="h-full flex flex-col items-center justify-center text-gray-500 p-8">
-                <AlertCircle className="w-12 h-12 mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No se pudo cargar la vista previa</h3>
-                <p className="text-center text-sm">
-                  Intenta refrescar la página o verifica que la tienda esté correctamente configurada.
-                </p>
-                <button
-                  onClick={() => setError(false)}
-                  className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  Reintentar
-                </button>
+          <div className="bg-white h-full transition-all duration-300 shadow-lg w-full rounded-lg">
+            <div className="flex flex-col h-full bg-white">
+              {/* Banner */}
+              <div className="relative w-full h-48 bg-gray-100">
+                {appearance?.banner_url ? (
+                  <img
+                    src={appearance.banner_url}
+                    alt="Banner de la tienda"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                    <span className="text-gray-400">Sin banner</span>
+                  </div>
+                )}
               </div>
-            ) : (
-              <iframe
-                src={previewUrl}
-                className="w-full h-full border-0"
-                title="Vista previa de la tienda"
-                sandbox="allow-same-origin allow-scripts allow-forms"
-                onError={handleIframeError}
-              />
-            )}
+
+              {/* Logo y Nombre */}
+              <div className="relative px-6">
+                <div className="absolute -top-16 left-6">
+                  <div className="w-32 h-32 rounded-lg overflow-hidden bg-white shadow-lg border-4 border-white">
+                    {appearance?.logo_url ? (
+                      <img
+                        src={appearance.logo_url}
+                        alt={`Logo de ${store.name}`}
+                        className="w-full h-full object-contain bg-white"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                        <span className="text-gray-400">Sin logo</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Información de la tienda */}
+              <div className="mt-20 px-6 pb-6">
+                <h1 className="text-2xl font-bold text-gray-900">{store.name}</h1>
+                {appearance?.welcome_text && (
+                  <p className="mt-2 text-gray-600">{appearance.welcome_text}</p>
+                )}
+                {appearance?.store_address && (
+                  <p className="mt-2 text-sm text-gray-500">{appearance.store_address}</p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
