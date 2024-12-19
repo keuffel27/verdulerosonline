@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { Camera, X, Plus, Trash2 } from 'lucide-react';
+import { Camera, X, Plus, Trash2, Upload, Image as ImageIcon } from 'lucide-react';
 import { toast } from "react-toastify";
-import { createProduct, updateProduct, uploadProductImage, getMeasurementUnits } from "../../services/products";
+import { createProduct, updateProduct, uploadImage, getMeasurementUnits } from "../../services/products";
 import type { Database } from '../../lib/database.types';
 import { useCategories } from "../../hooks/useCategories";
-import { useWebcam } from "../../hooks/useWebcam";
 
 type Product = Database['public']['Tables']['store_products']['Row'];
 type ProductPresentation = Database['public']['Tables']['product_presentations']['Row'];
@@ -48,8 +47,10 @@ export const ProductForm: React.FC<Props> = ({
   const [selectedSystem, setSelectedSystem] = useState<'metric' | 'imperial' | 'unit'>('metric');
   const [imagePreview, setImagePreview] = useState<string | null>(product?.image_url || null);
   const [isCapturing, setIsCapturing] = useState(false);
-  const webcamRef = useWebcam();
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const videoRef = React.createRef<HTMLVideoElement>();
+  const streamRef = React.createRef<MediaStream | null>(null);
+  const fileInputRef = React.createRef<HTMLInputElement>(null);
 
   const getSystemPresentations = (system: 'metric' | 'imperial' | 'unit') => {
     switch (system) {
@@ -202,31 +203,95 @@ export const ProductForm: React.FC<Props> = ({
 
   const handleImageUpload = async (file: File) => {
     try {
-      setLoading(true);
-      const imageUrl = await uploadProductImage(file);
+      setUploading(true);
+      
+      // Validaciones
+      if (!file.type.startsWith('image/')) {
+        toast.error('Por favor, selecciona una imagen');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('La imagen no debe superar los 5MB');
+        return;
+      }
+
+      // Subir la imagen a ImgBB
+      const { url: imageUrl } = await uploadImage(file);
+      
+      // Actualizar estado local
       setImagePreview(imageUrl);
       setValue('imageUrl', imageUrl);
+      
+      toast.success('Imagen actualizada con éxito');
     } catch (error) {
-      toast.error('Error al subir la imagen');
-      console.error(error);
+      console.error('Error al subir la imagen:', error);
+      toast.error('Error al actualizar la imagen');
     } finally {
-      setLoading(false);
+      setUploading(false);
     }
   };
 
-  const handleCapture = async () => {
-    if (webcamRef.current) {
-      const imageSrc = webcamRef.current.getScreenshot();
-      if (imageSrc) {
-        // Convertir base64 a File
-        const res = await fetch(imageSrc);
-        const blob = await res.blob();
-        const file = new File([blob], 'webcam-photo.jpg', { type: 'image/jpeg' });
-        await handleImageUpload(file);
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        streamRef.current = stream;
       }
+      setIsCapturing(true);
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      toast.error('Error al acceder a la cámara');
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
     }
     setIsCapturing(false);
   };
+
+  const captureImage = async () => {
+    if (!videoRef.current) return;
+
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      ctx.drawImage(videoRef.current, 0, 0);
+      
+      // Convertir a blob
+      const blob = await new Promise<Blob>((resolve) => 
+        canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.8)
+      );
+      
+      // Crear archivo
+      const file = new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' });
+      
+      // Subir imagen
+      await handleImageUpload(file);
+      
+      // Detener la cámara
+      stopCamera();
+    } catch (error) {
+      console.error('Error capturing image:', error);
+      toast.error('Error al capturar la imagen');
+    }
+  };
+
+  useEffect(() => {
+    // Limpiar al desmontar
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
 
   const onSubmit = async (data: ProductFormData) => {
     try {
@@ -519,61 +584,85 @@ export const ProductForm: React.FC<Props> = ({
             )}
 
             {/* Imagen */}
-            <div>
+            <div className="col-span-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Imagen del Producto
               </label>
-              <div className="flex items-start space-x-4">
-                <div className="relative w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
-                  {imagePreview ? (
-                    <div className="relative group">
-                      <img
-                        src={imagePreview}
-                        alt="Preview"
+              <div className="flex flex-col items-center space-y-4">
+                {/* Preview de la imagen */}
+                <div className="relative w-48 h-48 rounded-lg bg-gray-50 flex items-center justify-center overflow-hidden border-2 border-gray-200">
+                  {isCapturing ? (
+                    <div className="relative w-full h-full">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
                         className="w-full h-full object-cover"
                       />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setImagePreview(null);
-                          setValue('imageUrl', '');
-                        }}
-                        className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="w-6 h-6 text-white" />
-                      </button>
+                      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                        <button
+                          type="button"
+                          onClick={captureImage}
+                          className="bg-green-500 text-white p-2 rounded-full hover:bg-green-600"
+                        >
+                          <Camera className="w-5 h-5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={stopCamera}
+                          className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
                     </div>
+                  ) : imagePreview ? (
+                    <img
+                      src={imagePreview}
+                      alt="Vista previa del producto"
+                      className="object-contain w-full h-full"
+                    />
                   ) : (
-                    <div className="flex flex-col items-center justify-center h-full p-2">
-                      <Plus className="w-8 h-8 text-gray-400" />
-                      <span className="text-xs text-gray-500 text-center mt-1">
-                        Agregar imagen
-                      </span>
+                    <ImageIcon className="w-12 h-12 text-gray-400" />
+                  )}
+                  {uploading && (
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
                     </div>
                   )}
                 </div>
-                <div className="space-y-2">
+
+                {/* Botones de carga */}
+                <div className="flex space-x-4">
+                  <label className="cursor-pointer inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageUpload(file);
+                      }}
+                      disabled={uploading || isCapturing}
+                    />
+                    <Upload className="w-4 h-4 mr-2" />
+                    Subir Imagen
+                  </label>
+
                   <button
                     type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    onClick={startCamera}
+                    disabled={uploading || isCapturing}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Subir imagen
+                    <Camera className="w-4 h-4 mr-2" />
+                    Tomar Foto
                   </button>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        handleImageUpload(file);
-                      }
-                    }}
-                  />
                 </div>
+
+                <p className="text-sm text-gray-500">
+                  Formatos: PNG, JPG, WebP (máx. 5MB)
+                </p>
               </div>
             </div>
 
