@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { Camera, X, Plus, Trash2, Upload, Image as ImageIcon } from 'lucide-react';
 import { toast } from "react-toastify";
-import { createProduct, updateProduct, uploadImage, getMeasurementUnits } from "../../services/products";
+import { createProduct, updateProduct, getMeasurementUnits } from "../../services/products";
+import { uploadImage } from '../../services/imageUpload';
 import type { Database } from '../../lib/database.types';
 import { useCategories } from "../../hooks/useCategories";
 
@@ -48,9 +49,99 @@ export const ProductForm: React.FC<Props> = ({
   const [imagePreview, setImagePreview] = useState<string | null>(product?.image_url || null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const videoRef = React.createRef<HTMLVideoElement>();
-  const streamRef = React.createRef<MediaStream | null>(null);
-  const fileInputRef = React.createRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { categories } = useCategories(storeId);
+
+  const {
+    register,
+    control,
+    handleSubmit,
+    formState: { errors },
+    watch,
+    setValue,
+  } = useForm<ProductFormData>({
+    defaultValues: {
+      name: product?.name || '',
+      description: product?.description || '',
+      categoryId: product?.category_id || '',
+      basePrice: 0,
+      baseUnit: 'kg',
+      presentations: product?.presentations?.map(p => ({
+        id: p.id,
+        unitId: p.unit_id,
+        quantity: p.quantity,
+        price: p.price,
+        stock: p.stock || 0,
+        isDefault: p.is_default,
+      })) || [],
+      imageUrl: product?.image_url || '',
+    },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'presentations',
+  });
+
+  const baseUnit = watch('baseUnit');
+  const basePrice = watch('basePrice');
+
+  // Cleanup effect for camera stream
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    loadUnits();
+  }, []);
+
+  useEffect(() => {
+    if (baseUnit && units.length > 0) {
+      const unit = units.find(u => 
+        (baseUnit === 'kg' && u.symbol === 'g') ||
+        (baseUnit === 'lb' && u.symbol === 'lb') ||
+        (baseUnit === 'unit' && u.symbol === 'unit')
+      );
+
+      if (unit) {
+        // Limpiar presentaciones anteriores
+        setValue('presentations', []);
+        
+        // Agregar presentación base
+        append({
+          unitId: unit.id,
+          quantity: baseUnit === 'kg' ? 1000 : 1,
+          price: basePrice || 0,
+          stock: 0,
+          isDefault: true,
+        });
+      }
+    }
+  }, [baseUnit, units, basePrice, append, setValue]);
+
+  useEffect(() => {
+    if (basePrice && fields.length > 0) {
+      const updatedPresentations = fields.map((field) => {
+        const presentation = getBasePresentations().find(p => p.value === field.quantity);
+        if (presentation) {
+          return {
+            ...field,
+            price: basePrice * presentation.fraction
+          };
+        }
+        return field;
+      });
+
+      setValue('presentations', updatedPresentations);
+    }
+  }, [basePrice, fields, setValue]);
 
   const getSystemPresentations = (system: 'metric' | 'imperial' | 'unit') => {
     switch (system) {
@@ -79,35 +170,6 @@ export const ProductForm: React.FC<Props> = ({
   };
 
   const presentationOptions = getSystemPresentations(selectedSystem);
-
-  const { categories } = useCategories(storeId);
-
-  const {
-    register,
-    control,
-    handleSubmit,
-    formState: { errors },
-    watch,
-    setValue,
-  } = useForm<ProductFormData>({
-    defaultValues: {
-      name: product?.name || '',
-      description: product?.description || '',
-      categoryId: product?.category_id || '',
-      basePrice: 0,
-      baseUnit: '',
-      presentations: [],
-      imageUrl: product?.image_url || '',
-    },
-  });
-
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: 'presentations',
-  });
-
-  const baseUnit = watch('baseUnit');
-  const basePrice = watch('basePrice');
 
   // Obtener las presentaciones basadas en la unidad base
   const getBasePresentations = () => {
@@ -141,48 +203,6 @@ export const ProductForm: React.FC<Props> = ({
     }
   };
 
-  // Efecto para actualizar las presentaciones cuando cambia la unidad base
-  useEffect(() => {
-    if (baseUnit) {
-      const unit = units.find(u => 
-        (baseUnit === 'kg' && u.symbol === 'g') ||
-        (baseUnit === 'lb' && u.symbol === 'lb') ||
-        (baseUnit === 'unit' && u.symbol === 'unit')
-      );
-
-      if (unit) {
-        // Limpiar presentaciones anteriores
-        setValue('presentations', []);
-        
-        // Agregar presentación base
-        append({
-          unitId: unit.id,
-          quantity: baseUnit === 'kg' ? 1000 : 1,
-          price: basePrice,
-          isDefault: true,
-        });
-      }
-    }
-  }, [baseUnit]);
-
-  // Efecto para actualizar los precios cuando cambia el precio base
-  useEffect(() => {
-    if (basePrice && fields.length > 0) {
-      const updatedPresentations = fields.map((field, index) => {
-        const presentation = getBasePresentations().find(p => p.value === field.quantity);
-        if (presentation) {
-          return {
-            ...field,
-            price: basePrice * presentation.fraction
-          };
-        }
-        return field;
-      });
-
-      setValue('presentations', updatedPresentations);
-    }
-  }, [basePrice]);
-
   const loadUnits = async () => {
     try {
       const unitsData = await getMeasurementUnits();
@@ -192,14 +212,6 @@ export const ProductForm: React.FC<Props> = ({
       toast.error('Error al cargar las unidades de medida');
     }
   };
-
-  useEffect(() => {
-    loadUnits();
-  }, []);
-
-  if (units.length === 0) {
-    return <div className="p-4">Cargando unidades de medida...</div>;
-  }
 
   const handleImageUpload = async (file: File) => {
     try {
@@ -283,15 +295,6 @@ export const ProductForm: React.FC<Props> = ({
       toast.error('Error al capturar la imagen');
     }
   };
-
-  useEffect(() => {
-    // Limpiar al desmontar
-    return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, []);
 
   const onSubmit = async (data: ProductFormData) => {
     try {

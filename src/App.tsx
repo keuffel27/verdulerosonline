@@ -98,7 +98,7 @@ function App() {
         />
         <Route path="/store/:storeId" element={<StorePage />} />
         <Route
-          path="/store/:storeId/panel"
+          path="/store/:storeId/panel/*"
           element={
             <ProtectedRoute>
               <StorePanel />

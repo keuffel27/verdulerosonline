@@ -8,7 +8,10 @@ export function useStore(storeId: string | undefined) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchStore = async () => {
-    if (!storeId) return;
+    if (!storeId) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -16,40 +19,27 @@ export function useStore(storeId: string | undefined) {
 
       const { data: storeData, error: storeError } = await supabase
         .from('stores')
-        .select(`
-          *,
-          store_appearance (
-            logo_url,
-            banner_url,
-            store_address,
-            welcome_text,
-            primary_color,
-            secondary_color
-          )
-        `)
+        .select('*')
         .eq('id', storeId)
         .single();
 
       if (storeError) throw storeError;
 
-      // Asegurarse de que los datos de apariencia estén disponibles
-      const { data: appearanceData, error: appearanceError } = await supabase
+      // Obtener los datos de apariencia en una consulta separada
+      const { data: appearanceData } = await supabase
         .from('store_appearance')
         .select('*')
         .eq('store_id', storeId)
         .single();
 
-      if (appearanceError && appearanceError.code !== 'PGRST116') {
-        throw appearanceError;
-      }
-
       setStore({
         ...storeData,
-        store_appearance: appearanceData || storeData.store_appearance
+        store_appearance: appearanceData || null
       });
     } catch (err) {
       console.error('Error fetching store:', err);
       setError(err instanceof Error ? err.message : 'Error al cargar la tienda');
+      setStore(null);
     } finally {
       setLoading(false);
     }
