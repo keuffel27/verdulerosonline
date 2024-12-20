@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
-import type { Store } from '../types/store';
+import type { Store, StoreAppearance } from '../types/store';
 
 export function useStore(storeId: string | undefined) {
   const [store, setStore] = useState<Store | null>(null);
+  const [appearance, setAppearance] = useState<StoreAppearance | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,14 +33,13 @@ export function useStore(storeId: string | undefined) {
         .eq('store_id', storeId)
         .single();
 
-      setStore({
-        ...storeData,
-        store_appearance: appearanceData || null
-      });
+      setStore(storeData);
+      setAppearance(appearanceData);
     } catch (err) {
       console.error('Error fetching store:', err);
       setError(err instanceof Error ? err.message : 'Error al cargar la tienda');
       setStore(null);
+      setAppearance(null);
     } finally {
       setLoading(false);
     }
@@ -49,14 +49,5 @@ export function useStore(storeId: string | undefined) {
     fetchStore();
   }, [storeId]);
 
-  const refetchStore = async () => {
-    await fetchStore();
-  };
-
-  return {
-    store,
-    loading,
-    error,
-    refetchStore
-  };
+  return { store, appearance, loading, error };
 }

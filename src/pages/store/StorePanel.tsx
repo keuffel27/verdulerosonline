@@ -1,4 +1,4 @@
-import React, { useState, Suspense } from 'react';
+import React, { useState, Suspense, useEffect } from 'react';
 import { useParams, Link, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
@@ -19,6 +19,7 @@ import {
 import { BackButton } from '../../components/ui/BackButton';
 import { StorePreview } from '../../components/store/StorePreview';
 import { LogoUploader } from '../../components/store/LogoUploader';
+import { useStore } from '../../hooks/useStore';
 
 // Componentes de las diferentes secciones
 const StoreAppearance = React.lazy(() => import('./panels/StoreAppearance'));
@@ -35,6 +36,7 @@ const StorePanel: React.FC = () => {
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const { store, appearance } = useStore(storeId);
 
   const storeUrl = `${window.location.origin}/store/${storeId}`;
 
@@ -322,7 +324,7 @@ const StorePanel: React.FC = () => {
 
       {/* Store Preview */}
       <StorePreview
-        storeId={storeId}
+        storeId={storeId!}
         isVisible={previewVisible}
         isExpanded={previewExpanded}
         onToggleVisibility={() => setPreviewVisible(false)}

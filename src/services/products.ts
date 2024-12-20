@@ -22,10 +22,19 @@ export const getProducts = async (storeId: string): Promise<ProductWithPresentat
       )
     `)
     .eq('store_id', storeId)
+    .eq('status', 'active')
     .order('created_at');
 
   if (error) throw error;
-  return products || [];
+
+  // Filtrar productos que tienen presentaciones activas
+  const productsWithActivePresentations = products?.filter(product => {
+    const activePresentations = product.presentations?.filter(p => p.status === 'active') || [];
+    product.presentations = activePresentations;
+    return activePresentations.length > 0;
+  }) || [];
+
+  return productsWithActivePresentations;
 };
 
 export const getProductById = async (productId: string): Promise<ProductWithPresentations | null> => {
@@ -40,9 +49,16 @@ export const getProductById = async (productId: string): Promise<ProductWithPres
       )
     `)
     .eq('id', productId)
+    .eq('status', 'active')
     .single();
 
   if (error) throw error;
+
+  if (product) {
+    // Filtrar solo presentaciones activas
+    product.presentations = product.presentations?.filter(p => p.status === 'active') || [];
+  }
+
   return product;
 };
 
@@ -153,7 +169,8 @@ export const updateProduct = async (input: UpdateProductInput): Promise<ProductW
         category_id: categoryId,
         image_url: imageUrl,
       })
-      .eq('id', id);
+      .eq('id', id)
+      .eq('status', 'active');
 
     if (productError) throw productError;
   }
@@ -164,7 +181,8 @@ export const updateProduct = async (input: UpdateProductInput): Promise<ProductW
     const { data: existingPresentations } = await supabase
       .from('product_presentations')
       .select('id')
-      .eq('product_id', id);
+      .eq('product_id', id)
+      .eq('status', 'active');
 
     const existingIds = new Set(existingPresentations?.map(p => p.id) || []);
     
@@ -179,7 +197,7 @@ export const updateProduct = async (input: UpdateProductInput): Promise<ProductW
     if (presentationsToDelete?.length) {
       await supabase
         .from('product_presentations')
-        .delete()
+        .update({ status: 'inactive' })
         .in('id', presentationsToDelete.map(p => p.id));
     }
 
@@ -194,35 +212,46 @@ export const updateProduct = async (input: UpdateProductInput): Promise<ProductW
           sale_price: presentation.salePrice,
           stock: presentation.stock,
           is_default: presentation.isDefault,
+          status: 'active'
         })
         .eq('id', presentation.id)
     );
 
     // Insert new presentations
-    const insertPromises = presentationsToInsert.map(presentation =>
-      supabase
-        .from('product_presentations')
-        .insert({
-          product_id: id,
-          unit_id: presentation.unitId,
-          quantity: presentation.quantity,
-          price: presentation.price,
-          sale_price: presentation.salePrice,
-          stock: presentation.stock ?? 0,
-          is_default: presentation.isDefault ?? false,
-        })
-    );
+    if (presentationsToInsert.length > 0) {
+      const newPresentations = presentationsToInsert.map(p => ({
+        product_id: id,
+        unit_id: p.unitId,
+        quantity: p.quantity,
+        price: p.price,
+        sale_price: p.salePrice,
+        stock: p.stock ?? 0,
+        is_default: p.isDefault ?? false,
+        status: 'active'
+      }));
 
-    await Promise.all([...updatePromises, ...insertPromises]);
+      await supabase
+        .from('product_presentations')
+        .insert(newPresentations);
+    }
+
+    // Wait for all updates to complete
+    await Promise.all(updatePromises);
   }
 
-  return await getProductById(id);
+  // Return updated product
+  const updatedProduct = await getProductById(id);
+  if (!updatedProduct) {
+    throw new Error('No se pudo obtener el producto actualizado');
+  }
+
+  return updatedProduct;
 };
 
 export const deleteProduct = async (productId: string): Promise<void> => {
   const { error } = await supabase
     .from('store_products')
-    .delete()
+    .update({ status: 'inactive' })
     .eq('id', productId);
 
   if (error) throw error;

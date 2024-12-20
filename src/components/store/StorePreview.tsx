@@ -1,10 +1,8 @@
 import React from 'react';
-import { Store } from '../../types/store';
-import { StoreAppearance } from '../../types/store';
+import { X, Minimize2, Maximize2 } from 'lucide-react';
 
 interface StorePreviewProps {
-  store: Store;
-  appearance?: StoreAppearance | null;
+  storeId: string;
   isVisible: boolean;
   isExpanded: boolean;
   onToggleVisibility: () => void;
@@ -12,8 +10,7 @@ interface StorePreviewProps {
 }
 
 export const StorePreview: React.FC<StorePreviewProps> = ({
-  store,
-  appearance,
+  storeId,
   isVisible,
   isExpanded,
   onToggleVisibility,
@@ -52,56 +49,13 @@ export const StorePreview: React.FC<StorePreviewProps> = ({
           </div>
         </div>
 
-        {/* Preview */}
-        <div className="flex-1 bg-gray-100 flex items-center justify-center p-4">
-          <div className="bg-white h-full transition-all duration-300 shadow-lg w-full rounded-lg">
-            <div className="flex flex-col h-full bg-white">
-              {/* Banner */}
-              <div className="relative w-full h-48 bg-gray-100">
-                {appearance?.banner_url ? (
-                  <img
-                    src={appearance.banner_url}
-                    alt="Banner de la tienda"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                    <span className="text-gray-400">Sin banner</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Logo y Nombre */}
-              <div className="relative px-6">
-                <div className="absolute -top-16 left-6">
-                  <div className="w-32 h-32 rounded-lg overflow-hidden bg-white shadow-lg border-4 border-white">
-                    {appearance?.logo_url ? (
-                      <img
-                        src={appearance.logo_url}
-                        alt={`Logo de ${store.name}`}
-                        className="w-full h-full object-contain bg-white"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gray-50">
-                        <span className="text-gray-400">Sin logo</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Información de la tienda */}
-              <div className="mt-20 px-6 pb-6">
-                <h1 className="text-2xl font-bold text-gray-900">{store.name}</h1>
-                {appearance?.welcome_text && (
-                  <p className="mt-2 text-gray-600">{appearance.welcome_text}</p>
-                )}
-                {appearance?.store_address && (
-                  <p className="mt-2 text-sm text-gray-500">{appearance.store_address}</p>
-                )}
-              </div>
-            </div>
-          </div>
+        {/* Store Preview Iframe */}
+        <div className="flex-1 relative">
+          <iframe
+            src={`/store/${storeId}`}
+            className="w-full h-full border-none"
+            title="Vista previa de la tienda"
+          />
         </div>
       </div>
     </div>
