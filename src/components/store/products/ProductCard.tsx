@@ -2,6 +2,7 @@ import { toast } from 'react-toastify';
 import { formatCurrency } from '../../../utils/format';
 import type { Product, ProductPresentation } from '../../../types/store';
 import noImage from '../../../assets/no-image';
+import { Plus } from 'lucide-react';
 
 interface Props {
   product: Product;
@@ -57,6 +58,15 @@ export const ProductCard = ({ product }: Props) => {
       detail: { cart: currentCart }
     }));
 
+    // Feedback visual en el botón
+    const button = document.querySelector(`[data-presentation-id="${presentation.id}"]`);
+    if (button) {
+      button.classList.add('scale-95', 'bg-green-600', 'text-white');
+      setTimeout(() => {
+        button.classList.remove('scale-95', 'bg-green-600', 'text-white');
+      }, 200);
+    }
+
     // Mostrar notificación
     toast.success(
       `${formatPresentation(presentation.quantity, presentation.unit)} de ${product.name} agregado al carrito`,
@@ -65,55 +75,60 @@ export const ProductCard = ({ product }: Props) => {
         autoClose: 2000
       }
     );
-
-    // Feedback visual en el botón
-    const button = document.querySelector(`[data-presentation-id="${presentation.id}"]`);
-    if (button) {
-      button.classList.add('bg-green-500', 'text-white');
-      setTimeout(() => {
-        button.classList.remove('bg-green-500', 'text-white');
-      }, 200);
-    }
   };
 
   return (
-    <div className="group relative bg-white/80 backdrop-blur-sm rounded-xl shadow-lg overflow-hidden border border-green-100/30 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/10">
-      {/* Imagen del producto */}
-      <div className="relative h-48 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
-        <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-105">
-          <img
-            src={product.image_url || noImage}
-            alt={product.name}
-            className="w-full h-full object-cover"
-          />
-        </div>
+    <div className="group bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
+      {/* Imagen con overlay al hover */}
+      <div className="relative h-48 bg-gray-50">
+        <img
+          src={product.image_url || noImage}
+          alt={product.name}
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        
+        {/* Etiqueta de categoría */}
         {product.category && (
-          <span className="absolute top-3 right-3 bg-green-500/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-lg">
-            {product.category.name}
-          </span>
+          <div className="absolute top-3 right-3">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              {product.category.name}
+            </span>
+          </div>
         )}
       </div>
 
-      {/* Información del producto */}
-      <div className="p-5">
-        <h3 className="text-lg font-semibold mb-2 text-gray-800">{product.name}</h3>
+      {/* Contenido */}
+      <div className="p-4">
+        <h3 className="font-medium text-gray-900 group-hover:text-green-600 transition-colors duration-200">
+          {product.name}
+        </h3>
+        
         {product.description && (
-          <p className="text-gray-600 text-sm mb-3 line-clamp-2">{product.description}</p>
+          <p className="mt-1 text-sm text-gray-500 line-clamp-2">
+            {product.description}
+          </p>
         )}
 
         {/* Presentaciones */}
-        <div className="space-y-2">
+        <div className="mt-4 space-y-2">
           {activePresentations.map((presentation) => (
             <button
               key={presentation.id}
               data-presentation-id={presentation.id}
               onClick={() => handleAddToCart(presentation)}
-              className="w-full px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 
-                       bg-white border-2 border-green-500 text-green-600 hover:bg-green-500 
-                       hover:text-white flex items-center justify-between"
+              className="w-full px-4 py-2 rounded-lg border border-green-100 
+                       bg-white text-gray-700 hover:border-green-500 hover:bg-green-50
+                       transition-all duration-200 flex items-center justify-between
+                       focus:outline-none focus:ring-2 focus:ring-green-500/20"
             >
-              <span>{formatPresentation(presentation.quantity, presentation.unit)}</span>
-              <span className="font-bold">{formatCurrency(presentation.price)}</span>
+              <div className="flex items-center">
+                <Plus className="w-4 h-4 text-green-600 mr-2" />
+                <span>{formatPresentation(presentation.quantity, presentation.unit)}</span>
+              </div>
+              <span className="font-medium text-green-600">
+                {formatCurrency(presentation.price)}
+              </span>
             </button>
           ))}
         </div>

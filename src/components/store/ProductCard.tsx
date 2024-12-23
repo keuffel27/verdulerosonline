@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Product, Presentation } from '../../types/store';
 import { useCart } from '../../stores/cart';
+import { ShoppingCart, Plus } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
@@ -8,59 +9,76 @@ interface ProductCardProps {
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { addItem } = useCart();
-  const defaultPresentation = product.presentations.find((p) => p.is_default) || product.presentations[0];
+  const [selectedPresentation, setSelectedPresentation] = useState<Presentation>(
+    product.presentations.find((p) => p.is_default) || product.presentations[0]
+  );
 
-  if (!defaultPresentation) return null;
+  if (!selectedPresentation) return null;
 
   const handleAddToCart = () => {
-    console.log('Selected presentation:', defaultPresentation);
-    console.log('Product:', product);
-    
-    // Crear una copia del producto con la presentación seleccionada
     const productWithPresentation = {
       ...product,
-      price: defaultPresentation.price,
-      presentation: defaultPresentation
+      price: selectedPresentation.price,
+      presentation: selectedPresentation
     };
-
-    console.log('Adding to cart:', productWithPresentation);
     addItem(productWithPresentation);
   };
 
   return (
-    <div className="group relative overflow-hidden rounded-lg border bg-white shadow-sm transition-all hover:shadow-md">
+    <div className="group relative overflow-hidden rounded-xl bg-white shadow-sm transition-all hover:shadow-md">
+      {/* Product Image */}
       {product.image_url && (
-        <div className="aspect-square overflow-hidden">
+        <div className="aspect-square overflow-hidden bg-gray-100">
           <img
             src={product.image_url}
             alt={product.name}
-            className="h-full w-full object-cover transition-transform group-hover:scale-105"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         </div>
       )}
+      
+      {/* Product Info */}
       <div className="p-4">
-        <h3 className="text-lg font-medium">{product.name}</h3>
+        <h3 className="text-lg font-medium text-gray-900">{product.name}</h3>
         {product.description && (
-          <p className="mt-1 text-sm text-gray-500">{product.description}</p>
+          <p className="mt-1 text-sm text-gray-500 line-clamp-2">{product.description}</p>
         )}
-        <div className="mt-2 flex items-center justify-between">
-          <div>
-            <span className="text-lg font-medium">
-              ${defaultPresentation.price.toLocaleString('es-AR', {
-                minimumFractionDigits: 2,
-              })}
-            </span>
-            <span className="ml-1 text-sm text-gray-500">
-              / {defaultPresentation.quantity} {defaultPresentation.unit.symbol}
-            </span>
-          </div>
-          <button
-            onClick={handleAddToCart}
-            className="rounded-md bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700"
-          >
-            Agregar
-          </button>
+
+        {/* Presentations Selector */}
+        <div className="mt-3 space-y-2">
+          {product.presentations.length > 1 ? (
+            <select
+              value={selectedPresentation.id}
+              onChange={(e) => {
+                const presentation = product.presentations.find(p => p.id === e.target.value);
+                if (presentation) setSelectedPresentation(presentation);
+              }}
+              className="w-full rounded-lg border-gray-300 text-sm focus:border-green-500 focus:ring-green-500"
+            >
+              {product.presentations.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} - ${p.price.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className="flex items-center justify-between text-lg font-medium text-gray-900">
+              <span>{selectedPresentation.name}</span>
+              <span>${selectedPresentation.price.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+            </div>
+          )}
         </div>
+
+        {/* Add to Cart Button */}
+        <button
+          onClick={handleAddToCart}
+          className="mt-4 w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+        >
+          <span className="flex items-center justify-center space-x-2">
+            <ShoppingCart className="h-4 w-4" />
+            <span>Agregar al carrito</span>
+          </span>
+        </button>
       </div>
     </div>
   );
