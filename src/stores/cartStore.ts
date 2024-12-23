@@ -1,55 +1,92 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import type { Product, ProductPresentation } from '../types/store';
 
 interface CartItem {
-  id: string;
-  name: string;
-  price: number;
+  product: Product;
+  presentation: ProductPresentation;
   quantity: number;
-  unit: string;
-  imageUrl?: string;
 }
 
 interface CartStore {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, 'quantity'>) => void;
-  removeItem: (id: string) => void;
-  updateQuantity: (id: string, quantity: number) => void;
+  addItem: (item: CartItem) => void;
+  removeItem: (productId: string, presentationId: string) => void;
+  updateQuantity: (productId: string, presentationId: string, quantity: number) => void;
   clearCart: () => void;
+  getTotal: () => number;
+  getItemCount: () => number;
 }
 
 export const useCartStore = create<CartStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       items: [],
-      addItem: (item) =>
+
+      addItem: (newItem) => {
         set((state) => {
-          const existingItem = state.items.find((i) => i.id === item.id);
-          if (existingItem) {
-            return {
-              items: state.items.map((i) =>
-                i.id === item.id
-                  ? { ...i, quantity: i.quantity + 1 }
-                  : i
-              ),
+          const existingItemIndex = state.items.findIndex(
+            item => 
+              item.product.id === newItem.product.id && 
+              item.presentation.id === newItem.presentation.id
+          );
+
+          const newItems = [...state.items];
+
+          if (existingItemIndex >= 0) {
+            newItems[existingItemIndex] = {
+              ...newItems[existingItemIndex],
+              quantity: newItems[existingItemIndex].quantity + newItem.quantity
             };
+          } else {
+            newItems.push({ ...newItem });
           }
-          return { items: [...state.items, { ...item, quantity: 1 }] };
-        }),
-      removeItem: (id) =>
+
+          return { items: newItems };
+        });
+      },
+
+      removeItem: (productId, presentationId) => {
         set((state) => ({
-          items: state.items.filter((i) => i.id !== id),
-        })),
-      updateQuantity: (id, quantity) =>
-        set((state) => ({
-          items: state.items.map((i) =>
-            i.id === id ? { ...i, quantity } : i
+          items: state.items.filter(
+            item => !(item.product.id === productId && item.presentation.id === presentationId)
           ),
-        })),
+        }));
+      },
+
+      updateQuantity: (productId, presentationId, quantity) => {
+        if (quantity <= 0) {
+          get().removeItem(productId, presentationId);
+          return;
+        }
+        
+        set((state) => ({
+          items: state.items.map(item =>
+            item.product.id === productId && item.presentation.id === presentationId
+              ? { ...item, quantity }
+              : item
+          ),
+        }));
+      },
+
       clearCart: () => set({ items: [] }),
+
+      getTotal: () => {
+        const state = get();
+        return state.items.reduce((total, item) => {
+          return total + (item.presentation.price * item.quantity);
+        }, 0);
+      },
+
+      getItemCount: () => {
+        const state = get();
+        return state.items.reduce((count, item) => count + item.quantity, 0);
+      },
     }),
     {
       name: 'cart-storage',
+      storage: createJSONStorage(() => localStorage),
+      version: 1,
     }
   )
 );

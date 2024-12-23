@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { ProductCard } from '../components/store/products/ProductCard';
 import { StoreNavigation } from '../components/store/StoreNavigation';
 import { CategoryGrid } from '../components/store/CategoryGrid';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-toastify';
 import type { Product, Category, Store } from '../types/store';
 import { Instagram, Facebook, MessageCircle, Clock, MapPin } from 'lucide-react';
-import { useCart } from '../hooks/useCart';
+import { BasicCart } from '../components/store/BasicCart';
+import { BasicProductCard } from '../components/store/products/BasicProductCard';
 
 export const StoreFront: React.FC = () => {
   const { storeId } = useParams();
@@ -21,8 +21,6 @@ export const StoreFront: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [nextOpenTime, setNextOpenTime] = useState<string>('');
-
-  const { addToCart } = useCart();
 
   useEffect(() => {
     const fetchStoreData = async () => {
@@ -183,7 +181,7 @@ export const StoreFront: React.FC = () => {
                 </div>
               ) : (
                 <div className="w-20 h-20 sm:w-24 sm:h-24 mb-3 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
-                  <Store className="w-12 h-12 text-green-600" />
+                  <StoreNavigation className="w-12 h-12 text-green-600" />
                 </div>
               )}
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{store.name}</h1>
@@ -287,18 +285,16 @@ export const StoreFront: React.FC = () => {
         </div>
 
         {/* Productos */}
-        <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {products.map((product) => (
-            <ProductCard
+            <BasicProductCard
               key={product.id}
               product={product}
-              onAddToCart={(presentationId, quantity) =>
-                addToCart(product, presentationId, quantity)
-              }
             />
           ))}
         </div>
       </div>
+      <BasicCart />
     </div>
   );
 };

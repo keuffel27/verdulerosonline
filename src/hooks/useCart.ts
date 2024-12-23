@@ -18,6 +18,7 @@ export const useCart = create<CartStore>()(
       items: [],
 
       addItem: (newItem) => {
+        console.log('Adding item to cart:', newItem); // Debug log
         set((state) => {
           const existingItemIndex = state.items.findIndex(
             item => 
@@ -56,20 +57,27 @@ export const useCart = create<CartStore>()(
       clearCart: () => set({ items: [] }),
 
       getTotal: () => {
-        const { items } = get();
-        return items.reduce(
-          (total, item) => total + item.presentation.price * item.quantity,
-          0
-        );
+        const state = get();
+        return state.items.reduce((total, item) => {
+          return total + (item.presentation.price * item.quantity);
+        }, 0);
       },
 
       getItemCount: () => {
-        const { items } = get();
-        return items.reduce((count, item) => count + item.quantity, 0);
+        const state = get();
+        return state.items.reduce((count, item) => count + item.quantity, 0);
       },
     }),
     {
       name: 'cart-storage',
+      version: 1,
+      migrate: (persistedState: any, version: number) => {
+        if (version === 0) {
+          // Si es necesario migrar datos antiguos
+          return { items: [] };
+        }
+        return persistedState as CartStore;
+      },
     }
   )
 );

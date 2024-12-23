@@ -20,7 +20,29 @@ export default function StorePage() {
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [appearance, setAppearance] = useState<Store['store_appearance'] | null>(null);
-  const { addToCart } = useCart();
+  const cart = useCart();
+
+  const addToCart = (product: Product, presentationId: string, quantity: number) => {
+    console.log('Adding to cart:', { product, presentationId, quantity }); // Debug log
+    const presentation = product.presentations.find(p => p.id === presentationId);
+    if (!presentation) {
+      console.error('Presentation not found:', presentationId);
+      return;
+    }
+
+    cart.addItem({
+      product,
+      presentation,
+      quantity
+    });
+
+    // Forzar la actualización del FloatingCart
+    console.log('Cart items updated in FloatingCart:', cart.items); // Log de depuración para verificar actualización
+  };
+
+  const handleAddToCart = (product: Product, presentationId: string, quantity: number) => {
+    addToCart(product, presentationId, quantity);
+  };
 
   useEffect(() => {
     if (storeId) {
@@ -244,12 +266,11 @@ export default function StorePage() {
               {groupedProducts[category.id]?.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                   {groupedProducts[category.id].map((product) => (
-                    <ProductCard
+                    <ProductCard 
                       key={product.id}
                       product={product}
-                      onAddToCart={(presentationId, quantity) => 
-                        addToCart(product, presentationId, quantity)
-                      }
+                      onAddToCart={addToCart}
+                      handleAddToCart={handleAddToCart} 
                     />
                   ))}
                 </div>
@@ -262,12 +283,11 @@ export default function StorePage() {
           // Mostrar productos filtrados por categoría seleccionada
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {filteredProducts.map((product) => (
-              <ProductCard
+              <ProductCard 
                 key={product.id}
                 product={product}
-                onAddToCart={(presentationId, quantity) => 
-                  addToCart(product, presentationId, quantity)
-                }
+                onAddToCart={addToCart}
+                handleAddToCart={handleAddToCart} 
               />
             ))}
           </div>

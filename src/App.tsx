@@ -13,6 +13,7 @@ import StoreSettings from './pages/store/panels/StoreSettings';
 import StoreAppearance from './pages/store/panels/StoreAppearance';
 import StoreSchedule from './pages/store/panels/StoreSchedule';
 import StorePage from './pages/store/StorePage';
+import { CartProvider } from './context/CartContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -53,7 +54,7 @@ function App() {
   }
 
   return (
-    <>
+    <CartProvider>
       <Toaster 
         position="top-right"
         toastOptions={{
@@ -114,7 +115,7 @@ function App() {
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </>
+    </CartProvider>
   );
 }
 
