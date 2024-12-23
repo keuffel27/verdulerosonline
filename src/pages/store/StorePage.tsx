@@ -178,7 +178,6 @@ export default function StorePage() {
           ) : (
             <div className="w-full h-full bg-gradient-to-r from-green-600 to-green-700" />
           )}
-          {/* Overlay gradiente */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/50 to-transparent" />
           
           {/* Logo y Nombre de la Tienda */}
@@ -196,31 +195,30 @@ export default function StorePage() {
               {store.name}
             </h1>
             {appearance?.welcome_text && (
-              <p className="text-lg sm:text-xl text-center max-w-2xl mx-auto text-gray-100 drop-shadow">
+              <p className="text-lg sm:text-xl text-center max-w-2xl mx-auto text-gray-100 drop-shadow mb-4">
                 {appearance.welcome_text}
               </p>
             )}
-          </div>
-        </div>
-
-        {/* Información de la Tienda */}
-        <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2">
-          <div className="bg-white rounded-full shadow-lg px-6 py-2 flex items-center space-x-2">
-            <div className={`flex items-center ${isOpen ? 'text-green-600' : 'text-red-600'}`}>
-              <div className={`w-3 h-3 rounded-full mr-2 ${
-                isOpen ? 'bg-green-500' : 'bg-red-500'
-              }`} />
-              <span className="font-medium">{isOpen ? 'Abierto' : 'Cerrado'}</span>
+            
+            {/* Información de la tienda */}
+            <div className="bg-white/90 backdrop-blur-sm rounded-full shadow-lg px-6 py-2 flex items-center space-x-4">
+              <div className={`flex items-center ${isOpen ? 'text-green-600' : 'text-red-600'}`}>
+                <div className={`w-3 h-3 rounded-full mr-2 ${
+                  isOpen ? 'bg-green-500' : 'bg-red-500'
+                }`} />
+                <span className="font-medium">{isOpen ? 'Abierto' : 'Cerrado'}</span>
+              </div>
+              
+              {store.address && (
+                <>
+                  <div className="w-px h-6 bg-gray-300" />
+                  <div className="flex items-center text-gray-800">
+                    <MapPin className="w-4 h-4 mr-1" />
+                    <span className="text-sm">{store.address}</span>
+                  </div>
+                </>
+              )}
             </div>
-            {store.address && (
-              <>
-                <div className="w-px h-6 bg-gray-200" />
-                <div className="flex items-center text-gray-600">
-                  <MapPin className="w-4 h-4 mr-1" />
-                  <span className="text-sm">{store.address}</span>
-                </div>
-              </>
-            )}
           </div>
         </div>
       </div>
