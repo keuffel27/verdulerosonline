@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { FloatingCart } from '../../components/store/FloatingCart';
-import { Search, MapPin, Clock } from 'lucide-react';
+import { Search, MapPin, Clock, Sparkles } from 'lucide-react';
 import type { Database } from '../../lib/database.types';
 import type { Product, Category } from '../../types/store';
 import { ProductCard } from '../../components/store/products/ProductCard';
 import { useCart } from '../../hooks/useCart';
+import { motion, AnimatePresence } from 'framer-motion';
 
 type Store = Database['public']['Tables']['stores']['Row'];
 
@@ -168,59 +169,155 @@ export default function StorePage() {
       {/* Hero Section con Banner y Nombre de la Tienda */}
       <div className="relative">
         {/* Banner */}
-        <div className="relative w-full h-64 sm:h-72 md:h-96 overflow-hidden">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1 }}
+          className="relative w-full h-64 sm:h-72 md:h-96 overflow-hidden"
+        >
           {appearance?.banner_url ? (
-            <img
+            <motion.img
+              initial={{ scale: 1.1 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 1.5 }}
               src={appearance.banner_url}
               alt="Banner de la tienda"
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-r from-green-600 to-green-700" />
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="w-full h-full bg-gradient-to-r from-green-600 to-green-700" 
+            />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/50 to-transparent" />
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5, duration: 1 }}
+            className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/50 to-transparent" 
+          />
           
           {/* Logo y Nombre de la Tienda */}
           <div className="absolute inset-0 flex flex-col items-center justify-center text-white px-4">
             {appearance?.logo_url && (
-              <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-white shadow-xl mb-4 overflow-hidden border-4 border-white">
-                <img 
+              <motion.div
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ 
+                  type: "spring",
+                  stiffness: 260,
+                  damping: 20,
+                  delay: 0.3
+                }}
+                className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-white shadow-xl mb-4 overflow-hidden border-4 border-white"
+              >
+                {/* Efecto de brillo alrededor del logo */}
+                <motion.div
+                  animate={{
+                    scale: [1, 1.2, 1],
+                    opacity: [0.5, 0.8, 0.5],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    repeatType: "reverse"
+                  }}
+                  className="absolute -inset-1 bg-gradient-to-r from-green-400 via-emerald-500 to-teal-500 rounded-full blur-lg opacity-75"
+                />
+                <motion.img 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
                   src={appearance.logo_url}
                   alt={`${store.name} logo`}
-                  className="w-full h-full object-cover"
+                  className="relative w-full h-full object-cover"
                 />
-              </div>
+              </motion.div>
             )}
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-2 drop-shadow-lg">
-              {store.name}
-            </h1>
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="relative"
+            >
+              <motion.h1 
+                className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-2 drop-shadow-lg"
+              >
+                {store.name}
+              </motion.h1>
+              {/* Efecto de brillo en el título */}
+              <motion.div
+                animate={{
+                  opacity: [0, 0.5, 0],
+                  x: [0, 100, 200],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  repeatDelay: 1
+                }}
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent blur-sm"
+              />
+            </motion.div>
+            
             {appearance?.welcome_text && (
-              <p className="text-lg sm:text-xl text-center max-w-2xl mx-auto text-gray-100 drop-shadow mb-4">
+              <motion.p
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.8 }}
+                className="text-lg sm:text-xl text-center max-w-2xl mx-auto text-gray-100 drop-shadow mb-4"
+              >
                 {appearance.welcome_text}
-              </p>
+              </motion.p>
             )}
             
             {/* Información de la tienda */}
-            <div className="bg-white/90 backdrop-blur-sm rounded-full shadow-lg px-6 py-2 flex items-center space-x-4">
-              <div className={`flex items-center ${isOpen ? 'text-green-600' : 'text-red-600'}`}>
-                <div className={`w-3 h-3 rounded-full mr-2 ${
-                  isOpen ? 'bg-green-500' : 'bg-red-500'
-                }`} />
+            <motion.div 
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 1 }}
+              className="bg-white/90 backdrop-blur-sm rounded-full shadow-lg px-6 py-2 flex items-center space-x-4"
+            >
+              <motion.div 
+                animate={isOpen ? { scale: [1, 1.1, 1] } : {}}
+                transition={{ duration: 0.3 }}
+                className={`flex items-center ${isOpen ? 'text-green-600' : 'text-red-600'}`}
+              >
+                <motion.div
+                  animate={{ 
+                    scale: [1, 1.2, 1],
+                    opacity: [0.7, 1, 0.7]
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    repeatType: "reverse"
+                  }}
+                  className={`w-3 h-3 rounded-full mr-2 ${
+                    isOpen ? 'bg-green-500' : 'bg-red-500'
+                  }`}
+                />
                 <span className="font-medium">{isOpen ? 'Abierto' : 'Cerrado'}</span>
-              </div>
+              </motion.div>
               
-              {store.address && (
+              {appearance?.store_address && (
                 <>
                   <div className="w-px h-6 bg-gray-300" />
-                  <div className="flex items-center text-gray-800">
+                  <motion.div 
+                    initial={{ x: -20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 1.2 }}
+                    className="flex items-center text-gray-800"
+                  >
                     <MapPin className="w-4 h-4 mr-1" />
-                    <span className="text-sm">{store.address}</span>
-                  </div>
+                    <span className="text-sm">{appearance.store_address}</span>
+                  </motion.div>
                 </>
               )}
-            </div>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Main Content */}
