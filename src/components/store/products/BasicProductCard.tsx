@@ -1,14 +1,16 @@
 import { formatCurrency } from '../../../utils/format';
-import { simpleCart } from '../../../utils/simpleCart';
 import type { Product } from '../../../types/store';
 import noImage from '../../../assets/no-image';
 import { ShoppingCart } from 'lucide-react';
+import { useCart } from '../../../hooks/useCart';
 
 interface Props {
   product: Product;
 }
 
 export function BasicProductCard({ product }: Props) {
+  const { addItem } = useCart();
+
   if (!product?.presentations) return null;
 
   // Solo mostrar presentaciones activas
@@ -28,13 +30,19 @@ export function BasicProductCard({ product }: Props) {
     const presentation = product.presentations.find(p => p.id === presentationId);
     if (!presentation) return;
 
-    const formattedPresentation = formatPresentation(presentation.quantity, presentation.unit);
-
-    simpleCart.addItem({
-      id: product.id,
-      name: product.name,
-      presentation: formattedPresentation,
-      price: presentation.price
+    addItem({
+      product: {
+        id: product.id,
+        name: product.name,
+        image_url: product.image_url
+      },
+      presentation: {
+        id: presentation.id,
+        price: presentation.price,
+        quantity: presentation.quantity,
+        unit: presentation.unit
+      },
+      quantity: 1
     });
 
     // Feedback visual mejorado

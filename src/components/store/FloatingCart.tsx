@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
-import { ShoppingCart, X, Minus, Plus, ArrowRight } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { ShoppingCart, X, Minus, Plus } from 'lucide-react';
 import { formatCurrency } from '../../utils/format';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../../hooks/useCart';
 import { supabase } from '../../services/supabase';
-import { CheckoutForm } from './CheckoutForm';
 import { CartItem } from '../../types/store';
+import { CheckoutForm } from './CheckoutForm';
 
 interface Props {
   storeId: string;
@@ -16,6 +16,8 @@ export const FloatingCart: React.FC<Props> = ({ storeId }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
   const [socialMedia, setSocialMedia] = useState<any>(null);
+  const cartRef = useRef<HTMLDivElement>(null);
+  const [lastAddedItem, setLastAddedItem] = useState<string | null>(null);
 
   useEffect(() => {
     const loadSocialMedia = async () => {
@@ -38,9 +40,26 @@ export const FloatingCart: React.FC<Props> = ({ storeId }) => {
     loadSocialMedia();
   }, [storeId]);
 
-  const toggleCart = () => {
-    setIsOpen(!isOpen);
-  };
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (cartRef.current && !cartRef.current.contains(event.target as Node)) {
+        // Solo cerramos si se hace clic en el botón de cerrar
+        if ((event.target as Element)?.closest('.close-cart-button')) {
+          setIsOpen(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Efecto para abrir el carrito cuando se agregan productos
+  useEffect(() => {
+    if (items.length > 0) {
+      setIsOpen(true);
+    }
+  }, [items.length]);
 
   const handleUpdateQuantity = (productId: string, presentationId: string, delta: number) => {
     const item = items.find(
@@ -53,233 +72,219 @@ export const FloatingCart: React.FC<Props> = ({ storeId }) => {
       removeFromCart(productId, presentationId);
     } else {
       updateQuantity(productId, presentationId, newQuantity);
+      setLastAddedItem(`${productId}-${presentationId}`);
+      setTimeout(() => setLastAddedItem(null), 1000);
     }
+  };
+
+  const handleCheckout = () => {
+    setShowCheckoutForm(true);
   };
 
   const total = items.reduce((sum, item) => sum + (item.presentation.price * item.quantity), 0);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
-      className="fixed bottom-4 right-4 z-50"
-    >
-      {/* Cart Button */}
+    <div ref={cartRef} className="fixed bottom-4 right-4 z-50">
+      {/* Botón del carrito con animación de pulso */}
       <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={toggleCart}
-        className="relative"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        animate={items.length > 0 ? {
+          scale: [1, 1.1, 1],
+          transition: { duration: 0.3 }
+        } : {}}
+        onClick={() => setIsOpen(!isOpen)}
+        className="relative bg-gradient-to-r from-green-600 to-emerald-600 p-4 
+                 rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
       >
-        {/* Efecto de brillo en hover */}
-        <motion.div
-          animate={{ opacity: isOpen ? 1 : 0 }}
-          className="absolute -inset-2 bg-gradient-to-r from-green-600 via-emerald-500 to-teal-500 rounded-full opacity-75 blur-lg"
-        />
-        
-        {/* Botón principal */}
-        <motion.div
-          animate={{ 
-            scale: isOpen ? 1.05 : 1,
-            rotate: isOpen ? 180 : 0
-          }}
-          className="relative bg-gradient-to-r from-green-600 to-emerald-600 p-4 rounded-full shadow-lg
-                   flex items-center justify-center"
+        <ShoppingCart className="w-6 h-6 text-white" />
+        <motion.span
+          key={items.length}
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="absolute -top-2 -right-2 bg-white text-green-600 
+                  text-xs font-bold rounded-full w-5 h-5 flex items-center 
+                  justify-center border-2 border-green-600"
         >
-          <ShoppingCart className="w-6 h-6 text-white" />
-          
-          {/* Contador de items */}
-          <AnimatePresence>
-            {items.length > 0 && (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                exit={{ scale: 0 }}
-                className="absolute -top-2 -right-2"
-              >
-                <motion.div
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ duration: 0.3 }}
-                  className="relative"
-                >
-                  <div className="absolute -inset-0.5 bg-red-500 rounded-full blur opacity-50" />
-                  <div className="relative bg-red-500 text-white text-xs w-6 h-6 
-                               rounded-full flex items-center justify-center font-medium">
-                    {items.length}
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
+          {items.length}
+        </motion.span>
       </motion.button>
 
-      {/* Cart Modal */}
+      {/* Carrito desplegable con animaciones mejoradas */}
       <AnimatePresence>
-        {isOpen && (
+        {isOpen && !showCheckoutForm && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ 
+              type: "spring",
+              stiffness: 300,
+              damping: 30
+            }}
+            className="absolute bottom-full right-0 mb-2 w-96 bg-white rounded-lg 
+                     shadow-xl overflow-hidden max-h-[80vh]"
+          >
+            {/* Header con animación de gradiente */}
+            <motion.div 
+              className="flex items-center justify-between p-4 border-b
+                       bg-gradient-to-r from-green-500 to-emerald-500"
+            >
+              <h2 className="text-lg font-medium text-white">Tu Carrito</h2>
+              <button 
+                onClick={() => setIsOpen(false)}
+                className="close-cart-button p-2 hover:bg-white/20 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-white" />
+              </button>
+            </motion.div>
+
+            {/* Lista de productos con animaciones */}
+            <div className="overflow-y-auto p-4 space-y-3" style={{ maxHeight: 'calc(80vh - 200px)' }}>
+              {items.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <ShoppingCart className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-lg">Tu carrito está vacío</p>
+                  <p className="text-sm">¡Agrega algunos productos!</p>
+                </div>
+              ) : (
+                <AnimatePresence mode="popLayout">
+                  {items.map((item) => (
+                    <motion.div
+                      key={`${item.product.id}-${item.presentation.id}`}
+                      layout
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ 
+                        opacity: 1, 
+                        x: 0,
+                        scale: lastAddedItem === `${item.product.id}-${item.presentation.id}` ? [1, 1.02, 1] : 1,
+                      }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                      className="flex items-start p-3 bg-white rounded-lg border 
+                               hover:border-green-200 transition-all duration-300
+                               hover:shadow-md"
+                    >
+                      {item.product.image_url && (
+                        <motion.img
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          src={item.product.image_url}
+                          alt={item.product.name}
+                          className="w-16 h-16 rounded-md object-cover mr-3"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium truncate">{item.product.name}</h3>
+                        <p className="text-sm text-gray-500">
+                          {item.presentation.quantity} {item.presentation.unit.symbol}
+                        </p>
+                        <div className="flex items-center justify-between mt-2">
+                          <motion.p 
+                            key={item.presentation.price * item.quantity}
+                            initial={{ scale: 0.8 }}
+                            animate={{ scale: 1 }}
+                            className="text-sm font-medium text-green-600"
+                          >
+                            {formatCurrency(item.presentation.price)}
+                          </motion.p>
+                          <div className="flex items-center space-x-2 bg-gray-50 rounded-lg p-1">
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => handleUpdateQuantity(
+                                item.product.id, 
+                                item.presentation.id, 
+                                -1
+                              )}
+                              className="p-1 rounded-full hover:bg-white 
+                                       transition-colors text-red-500"
+                            >
+                              <Minus className="w-4 h-4" />
+                            </motion.button>
+                            <motion.span 
+                              key={item.quantity}
+                              initial={{ scale: 0.8 }}
+                              animate={{ scale: 1 }}
+                              className="w-6 text-center text-sm font-medium"
+                            >
+                              {item.quantity}
+                            </motion.span>
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => handleUpdateQuantity(
+                                item.product.id, 
+                                item.presentation.id, 
+                                1
+                              )}
+                              className="p-1 rounded-full hover:bg-white 
+                                       transition-colors text-green-500"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </motion.button>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              )}
+            </div>
+
+            {/* Footer con animación de total */}
+            <motion.div 
+              layout
+              className="border-t bg-white p-4"
+            >
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-gray-600">Total</span>
+                <motion.span 
+                  key={total}
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  className="text-lg font-semibold"
+                >
+                  {formatCurrency(total)}
+                </motion.span>
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleCheckout}
+                className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-emerald-600 
+                         text-white font-medium rounded-lg hover:shadow-lg
+                         transition-all duration-300"
+              >
+                REALIZAR PEDIDO AHORA MISMO
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Formulario de checkout */}
+        {showCheckoutForm && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed inset-0 z-50 overflow-y-auto"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
           >
-            {/* Overlay */}
-            <div className="fixed inset-0 bg-black bg-opacity-50" onClick={toggleCart} />
-
-            {/* Content */}
-            <div className="relative min-h-screen flex items-center justify-center p-4">
-              {!showCheckoutForm ? (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 20 }}
-                  className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-auto relative"
-                >
-                  {/* Close button */}
-                  <motion.button
-                    whileHover={{ rotate: 90 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={toggleCart}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors absolute top-4 right-4"
-                  >
-                    <X className="w-5 h-5 text-gray-500" />
-                  </motion.button>
-
-                  {/* Cart items */}
-                  <motion.div 
-                    className="flex-1 overflow-y-auto space-y-4 -mr-4 pr-4"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.1 }}
-                  >
-                    {items.length === 0 ? (
-                      <motion.div 
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ type: "spring" }}
-                        className="text-center py-8"
-                      >
-                        <motion.div
-                          animate={{ 
-                            rotate: [0, 10, -10, 10, 0],
-                            scale: [1, 1.1, 1]
-                          }}
-                          transition={{ 
-                            duration: 2,
-                            repeat: Infinity,
-                            repeatType: "reverse"
-                          }}
-                        >
-                          <ShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                        </motion.div>
-                        <p className="text-gray-500">Tu carrito está vacío</p>
-                        <p className="text-sm text-gray-400 mt-1">¡Agrega algunos productos!</p>
-                      </motion.div>
-                    ) : (
-                      <AnimatePresence mode="popLayout">
-                        {items.map((item) => (
-                          <motion.div
-                            key={`${item.product.id}-${item.presentation.id}`}
-                            layout
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-4 
-                                     shadow-sm hover:shadow-md transition-all duration-200
-                                     border border-gray-100 hover:border-green-200"
-                          >
-                            <div className="flex items-center gap-4">
-                              <div className="flex-1">
-                                <motion.h4 
-                                  layout="position"
-                                  className="font-medium text-gray-800"
-                                >
-                                  {item.product.name}
-                                </motion.h4>
-                                <motion.p 
-                                  layout="position"
-                                  className="text-sm text-gray-500"
-                                >
-                                  {`${item.presentation.quantity} ${item.presentation.unit.symbol}`}
-                                </motion.p>
-                                <motion.p 
-                                  layout="position"
-                                  className="text-green-600 font-medium mt-1"
-                                >
-                                  {formatCurrency(item.presentation.price)}
-                                </motion.p>
-                              </div>
-                              
-                              <div className="flex items-center gap-2">
-                                <motion.button
-                                  whileHover={{ scale: 1.1 }}
-                                  whileTap={{ scale: 0.9 }}
-                                  onClick={() => handleUpdateQuantity(item.product.id, item.presentation.id, -1)}
-                                  className="p-1.5 hover:bg-red-50 rounded-full transition-colors text-red-500"
-                                >
-                                  <Minus className="w-4 h-4" />
-                                </motion.button>
-                                <motion.span 
-                                  layout
-                                  key={item.quantity}
-                                  initial={{ scale: 0.8 }}
-                                  animate={{ scale: 1 }}
-                                  className="w-8 text-center font-medium"
-                                >
-                                  {item.quantity}
-                                </motion.span>
-                                <motion.button
-                                  whileHover={{ scale: 1.1 }}
-                                  whileTap={{ scale: 0.9 }}
-                                  onClick={() => handleUpdateQuantity(item.product.id, item.presentation.id, 1)}
-                                  className="p-1.5 hover:bg-green-50 rounded-full transition-colors text-green-500"
-                                >
-                                  <Plus className="w-4 h-4" />
-                                </motion.button>
-                              </div>
-                            </div>
-                          </motion.div>
-                        ))}
-                      </AnimatePresence>
-                    )}
-                  </motion.div>
-
-                  {/* Total and Checkout */}
-                  <div className="mt-6 space-y-4">
-                    <div className="flex justify-between items-center text-lg font-semibold">
-                      <span>Total</span>
-                      <span>{formatCurrency(total)}</span>
-                    </div>
-                    
-                    {items.length > 0 && (
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => setShowCheckoutForm(true)}
-                        className="w-full py-3 px-4 bg-green-600 text-white font-medium rounded-lg 
-                                hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 
-                                focus:ring-offset-2 transition-colors"
-                      >
-                        Finalizar Pedido
-                      </motion.button>
-                    )}
-                  </div>
-                </motion.div>
-              ) : (
-                <CheckoutForm
-                  onClose={() => {
-                    setShowCheckoutForm(false);
-                    toggleCart();
-                  }}
-                  whatsappNumber={socialMedia?.whatsapp_number || ''}
-                  whatsappMessage={socialMedia?.whatsapp_message}
-                />
-              )}
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" 
+                 onClick={() => setShowCheckoutForm(false)} />
+            <div className="relative w-full max-w-md">
+              <CheckoutForm
+                onClose={() => {
+                  setShowCheckoutForm(false);
+                  setIsOpen(false);
+                }}
+                whatsappNumber={socialMedia?.whatsapp_number || ''}
+                whatsappMessage={socialMedia?.whatsapp_message}
+              />
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 };

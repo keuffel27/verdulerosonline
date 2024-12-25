@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Truck, Store, CreditCard, Wallet } from 'lucide-react';
+import { MapPin, Truck, Store, CreditCard, Wallet, X } from 'lucide-react';
 import { useCart } from '../../hooks/useCart';
 
 interface CheckoutFormProps {
@@ -46,9 +46,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
       note: '📝'
     };
 
-    const items = useCart.getState().items;
-    const total = useCart.getState().total;
-
     let message = `*¡Nuevo Pedido!* ${emoji.cart}\n\n`;
     
     // Información del cliente
@@ -64,19 +61,19 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
       message += `*${emoji.location} Dirección de entrega:*\n`;
       message += `• Calle: ${formData.address.street}\n`;
       message += `• Número: ${formData.address.number}\n`;
-      message += `• Referencia: ${formData.address.reference}\n`;
+      message += `• Referencia: ${formData.address.reference}\n\n`;
     }
     
     // Método de pago
-    message += `\n*${emoji.money} Método de pago:* ${
+    message += `*${emoji.money} Método de pago:* ${
       formData.paymentMethod === 'cash' ? 'Efectivo' :
       formData.paymentMethod === 'transfer' ? 'Transferencia' : 'Tarjeta'
     }\n\n`;
     
     // Productos
-    message += `*📝 Detalle del pedido:*\n`;
+    message += `*${emoji.cart} Detalle del pedido:*\n`;
     items.forEach(item => {
-      message += `• ${item.quantity}x ${item.name} - $${item.price * item.quantity}\n`;
+      message += `• ${item.quantity}x ${item.product.name} (${item.presentation.quantity} ${item.presentation.unit.symbol}) - $${item.presentation.price * item.quantity}\n`;
     });
     
     // Total
@@ -103,9 +100,42 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-auto"
+      className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-auto relative"
     >
+      {/* Botón de cerrar */}
+      <motion.button
+        whileHover={{ scale: 1.1, rotate: 90 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={onClose}
+        className="absolute top-4 right-4 p-2 rounded-full text-red-500 
+                 hover:bg-red-50 transition-colors"
+      >
+        <X className="w-5 h-5" />
+      </motion.button>
+
       <h2 className="text-2xl font-bold mb-6 text-gray-800">Finalizar Pedido</h2>
+      
+      {/* Resumen del carrito */}
+      <div className="mb-6 bg-gray-50 rounded-lg p-4">
+        <h3 className="text-sm font-medium text-gray-700 mb-2">Resumen del pedido</h3>
+        <div className="space-y-2">
+          {items.map((item) => (
+            <div key={`${item.product.id}-${item.presentation.id}`} 
+                 className="flex justify-between text-sm">
+              <span className="text-gray-600">
+                {item.quantity}x {item.product.name} ({item.presentation.quantity} {item.presentation.unit.symbol})
+              </span>
+              <span className="font-medium">
+                ${item.presentation.price * item.quantity}
+              </span>
+            </div>
+          ))}
+          <div className="border-t pt-2 mt-2 flex justify-between font-medium">
+            <span>Total</span>
+            <span className="text-green-600">${total}</span>
+          </div>
+        </div>
+      </div>
       
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Nombre del destinatario */}
@@ -271,9 +301,9 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           type="submit"
-          className="w-full py-3 px-4 bg-green-600 text-white font-medium rounded-lg 
-                   hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 
-                   focus:ring-offset-2 transition-colors"
+          className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-emerald-600 
+                   text-white font-medium rounded-lg hover:shadow-lg
+                   transition-all duration-300"
         >
           REALIZAR PEDIDO AHORA MISMO
         </motion.button>
