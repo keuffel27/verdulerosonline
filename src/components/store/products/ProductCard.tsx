@@ -5,12 +5,14 @@ import type { Product, ProductPresentation } from '../../../types/store';
 import noImage from '../../../assets/no-image';
 import { Plus, ShoppingBag, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useCart } from '../../../hooks/useCart';
 
 interface Props {
   product: Product;
+  onAddToCart: (product: Product, presentationId: string, quantity: number) => void;
 }
 
-export const ProductCard = ({ product }: Props) => {
+export const ProductCard = ({ product, onAddToCart }: Props) => {
   const [selectedPresentation, setSelectedPresentation] = useState<string | null>(null);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -31,31 +33,13 @@ export const ProductCard = ({ product }: Props) => {
     return `${quantity} ${unit.symbol}`;
   };
 
-  const handleAddToCart = (presentation: ProductPresentation) => {
-    setSelectedPresentation(presentation.id);
+  const handleAddToCart = (presentationId: string) => {
+    const presentation = product.presentations.find(p => p.id === presentationId);
+    if (!presentation) return;
 
-    const currentCart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const existingItemIndex = currentCart.findIndex(
-      (item: any) => item.productId === product.id && item.presentationId === presentation.id
-    );
+    onAddToCart(product, presentationId, 1);
 
-    if (existingItemIndex > -1) {
-      currentCart[existingItemIndex].quantity += 1;
-    } else {
-      currentCart.push({
-        productId: product.id,
-        presentationId: presentation.id,
-        name: product.name,
-        presentation: formatPresentation(presentation.quantity, presentation.unit),
-        price: presentation.price,
-        quantity: 1
-      });
-    }
-
-    localStorage.setItem('cart', JSON.stringify(currentCart));
-    window.dispatchEvent(new CustomEvent('cartUpdated', { 
-      detail: { cart: currentCart }
-    }));
+    setSelectedPresentation(presentationId);
 
     toast.success(
       `${formatPresentation(presentation.quantity, presentation.unit)} de ${product.name} agregado al carrito`,
@@ -164,7 +148,7 @@ export const ProductCard = ({ product }: Props) => {
               transition={{ delay: index * 0.1 }}
               whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => handleAddToCart(presentation)}
+              onClick={() => handleAddToCart(presentation.id)}
               className={`w-full relative group/btn ${
                 selectedPresentation === presentation.id
                   ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white'
