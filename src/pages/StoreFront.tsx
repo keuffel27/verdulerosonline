@@ -4,10 +4,11 @@ import { StoreNavigation } from '../components/store/StoreNavigation';
 import { CategoryGrid } from '../components/store/CategoryGrid';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-toastify';
-import type { Product, Category, Store } from '../types/store';
+import type { Product, Category, Store, WeekSchedule } from '../types/store';
 import { Instagram, Facebook, MessageCircle, Clock, MapPin } from 'lucide-react';
 import { BasicCart } from '../components/store/BasicCart';
 import { BasicProductCard } from '../components/store/products/BasicProductCard';
+import { isStoreOpen } from '../services/schedule';
 
 export const StoreFront: React.FC = () => {
   const { storeId } = useParams();
@@ -19,8 +20,7 @@ export const StoreFront: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [store, setStore] = useState<Store | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [nextOpenTime, setNextOpenTime] = useState<string>('');
+  const [storeStatus, setStoreStatus] = useState<{ isOpen: boolean; nextChange: string }>({ isOpen: false, nextChange: '' });
 
   useEffect(() => {
     const fetchStoreData = async () => {
@@ -49,7 +49,7 @@ export const StoreFront: React.FC = () => {
               whatsapp_number
             ),
             store_schedule (
-              *
+              schedule
             )
           `)
           .eq('id', storeId)
@@ -62,8 +62,64 @@ export const StoreFront: React.FC = () => {
         }
 
         setStore(storeData);
-        setIsOpen(true); // Temporal, luego implementar lógica real
-        setNextOpenTime('8h 42m');
+
+        // Procesar el horario
+        let schedule: WeekSchedule;
+        if (storeData.store_schedule?.schedule) {
+          schedule = storeData.store_schedule.schedule;
+        } else {
+          // Horario por defecto
+          schedule = {
+            monday: {
+              isOpen: true,
+              morning: { open: '09:00', close: '13:00' },
+              afternoon: { open: '16:00', close: '20:00' },
+            },
+            tuesday: {
+              isOpen: true,
+              morning: { open: '09:00', close: '13:00' },
+              afternoon: { open: '16:00', close: '20:00' },
+            },
+            wednesday: {
+              isOpen: true,
+              morning: { open: '09:00', close: '13:00' },
+              afternoon: { open: '16:00', close: '20:00' },
+            },
+            thursday: {
+              isOpen: true,
+              morning: { open: '09:00', close: '13:00' },
+              afternoon: { open: '16:00', close: '20:00' },
+            },
+            friday: {
+              isOpen: true,
+              morning: { open: '09:00', close: '13:00' },
+              afternoon: { open: '16:00', close: '20:00' },
+            },
+            saturday: {
+              isOpen: true,
+              morning: { open: '09:00', close: '13:00' },
+              afternoon: { open: '16:00', close: '20:00' },
+            },
+            sunday: {
+              isOpen: false,
+              morning: { open: '09:00', close: '13:00' },
+              afternoon: { open: '16:00', close: '20:00' },
+            },
+          };
+        }
+
+        // Calcular si la tienda está abierta
+        const status = isStoreOpen(schedule);
+        setStoreStatus(status);
+
+        // Actualizar cada minuto
+        const interval = setInterval(() => {
+          const status = isStoreOpen(schedule);
+          setStoreStatus(status);
+        }, 60000);
+
+        return () => clearInterval(interval);
+
       } catch (error) {
         console.error('Error fetching store:', error);
       } finally {
@@ -180,20 +236,20 @@ export const StoreFront: React.FC = () => {
               {/* Store Status */}
               <div className="flex items-center space-x-4">
                 <div className={`inline-flex items-center px-3 py-1 rounded-full 
-                  ${isOpen 
+                  ${storeStatus.isOpen 
                     ? 'bg-green-100 text-green-800 border border-green-200' 
                     : 'bg-red-100 text-red-800 border border-red-200'
                   }`}
                 >
                   <div className={`w-2 h-2 rounded-full mr-2 ${
-                    isOpen ? 'bg-green-500' : 'bg-red-500'
+                    storeStatus.isOpen ? 'bg-green-500' : 'bg-red-500'
                   }`} />
-                  <span className="font-medium">{isOpen ? 'Abierto' : 'Cerrado'}</span>
+                  <span className="font-medium">{storeStatus.isOpen ? 'Abierto' : 'Cerrado'}</span>
                 </div>
-                {!isOpen && nextOpenTime && (
+                {storeStatus.nextChange && (
                   <span className="text-sm text-gray-500 flex items-center">
                     <Clock className="w-4 h-4 mr-1" />
-                    Abre en {nextOpenTime}
+                    {storeStatus.nextChange}
                   </span>
                 )}
               </div>

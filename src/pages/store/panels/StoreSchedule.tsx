@@ -89,10 +89,24 @@ export default function StoreSchedule() {
     setSaving(true);
     try {
       await updateStoreSchedule(storeId, schedule);
-      toast.success('Horario actualizado exitosamente');
+      toast.success('Horario actualizado exitosamente', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     } catch (error) {
       console.error('Error saving schedule:', error);
-      toast.error('Error al guardar el horario');
+      toast.error('Error al guardar el horario', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     } finally {
       setSaving(false);
     }
