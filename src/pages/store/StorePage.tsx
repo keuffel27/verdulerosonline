@@ -8,6 +8,7 @@ import type { Product, Category } from '../../types/store';
 import { ProductCard } from '../../components/store/products/ProductCard';
 import { useCart } from '../../hooks/useCart';
 import { motion, AnimatePresence } from 'framer-motion';
+import { StoreStatus } from '../../components/store/StoreStatus';
 
 type Store = Database['public']['Tables']['stores']['Row'];
 
@@ -212,94 +213,49 @@ export default function StorePage() {
                 }}
                 className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-white shadow-xl mb-4 overflow-hidden border-4 border-white"
               >
-                {/* Efecto de brillo alrededor del logo */}
-                <motion.div
-                  animate={{
-                    scale: [1, 1.2, 1],
-                    opacity: [0.5, 0.8, 0.5],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    repeatType: "reverse"
-                  }}
-                  className="absolute -inset-1 bg-gradient-to-r from-green-400 via-emerald-500 to-teal-500 rounded-full blur-lg opacity-75"
-                />
                 <motion.img 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.5 }}
                   src={appearance.logo_url}
-                  alt={`${store.name} logo`}
+                  alt={`${store?.name} logo`}
                   className="relative w-full h-full object-cover"
                 />
               </motion.div>
             )}
+            
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.6 }}
-              className="relative"
+              className="text-center"
             >
               <motion.h1 
                 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-2 drop-shadow-lg"
               >
-                {store.name}
+                {store?.name}
               </motion.h1>
-              {/* Efecto de brillo en el título */}
-              <motion.div
-                animate={{
-                  opacity: [0, 0.5, 0],
-                  x: [0, 100, 200],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  repeatDelay: 1
-                }}
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent blur-sm"
-              />
+              
+              {appearance?.welcome_text && (
+                <motion.p
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.8 }}
+                  className="text-lg sm:text-xl text-center max-w-2xl mx-auto text-gray-100 drop-shadow mb-4"
+                >
+                  {appearance.welcome_text}
+                </motion.p>
+              )}
             </motion.div>
             
-            {appearance?.welcome_text && (
-              <motion.p
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.8 }}
-                className="text-lg sm:text-xl text-center max-w-2xl mx-auto text-gray-100 drop-shadow mb-4"
-              >
-                {appearance.welcome_text}
-              </motion.p>
-            )}
-            
-            {/* Información de la tienda */}
+            {/* Estado de la tienda y dirección */}
             <motion.div 
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 1 }}
               className="bg-white/90 backdrop-blur-sm rounded-full shadow-lg px-6 py-2 flex items-center space-x-4"
             >
-              <motion.div 
-                animate={isOpen ? { scale: [1, 1.1, 1] } : {}}
-                transition={{ duration: 0.3 }}
-                className={`flex items-center ${isOpen ? 'text-green-600' : 'text-red-600'}`}
-              >
-                <motion.div
-                  animate={{ 
-                    scale: [1, 1.2, 1],
-                    opacity: [0.7, 1, 0.7]
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    repeatType: "reverse"
-                  }}
-                  className={`w-3 h-3 rounded-full mr-2 ${
-                    isOpen ? 'bg-green-500' : 'bg-red-500'
-                  }`}
-                />
-                <span className="font-medium">{isOpen ? 'Abierto' : 'Cerrado'}</span>
-              </motion.div>
+              {storeId && <StoreStatus storeId={storeId} />}
               
               {appearance?.store_address && (
                 <>
@@ -321,7 +277,7 @@ export default function StorePage() {
       </div>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Search and Categories */}
         <div className="mb-8 space-y-6">
           {/* Search Bar */}
@@ -368,54 +324,41 @@ export default function StorePage() {
         </div>
 
         {/* Products Grid */}
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Cargando productos...</p>
-          </div>
-        ) : selectedCategory === 'all' ? (
-          // Mostrar productos agrupados por categoría
-          <div className="space-y-12">
-            {categories.map((category) => {
-              const categoryProducts = groupedProducts[category.id] || [];
-              if (categoryProducts.length === 0) return null;
-
-              return (
-                <section key={category.id} className="scroll-m-20" id={`category-${category.id}`}>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                    <span>{category.name}</span>
-                    <div className="ml-4 h-px bg-gray-200 flex-1" />
-                  </h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {categoryProducts.map((product) => (
-                      <ProductCard 
-                        key={product.id}
-                        product={product}
-                        onAddToCart={addToCart}
-                        handleAddToCart={handleAddToCart}
-                      />
-                    ))}
-                  </div>
-                </section>
-              );
-            })}
-          </div>
-        ) : (
-          // Mostrar productos filtrados por categoría seleccionada
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredProducts.map((product) => (
-              <ProductCard 
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {loading ? (
+            // Loading skeleton
+            Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="bg-white rounded-lg shadow-sm p-4 space-y-4 animate-pulse"
+              >
+                <div className="w-full h-48 bg-gray-200 rounded-lg" />
+                <div className="h-4 bg-gray-200 rounded w-3/4" />
+                <div className="h-4 bg-gray-200 rounded w-1/2" />
+              </div>
+            ))
+          ) : filteredProducts.length > 0 ? (
+            filteredProducts.map((product) => (
+              <ProductCard
                 key={product.id}
                 product={product}
-                onAddToCart={addToCart}
-                handleAddToCart={handleAddToCart}
+                onAddToCart={handleAddToCart}
               />
-            ))}
-          </div>
-        )}
+            ))
+          ) : (
+            <div className="col-span-full text-center py-12">
+              <Sparkles className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No hay productos</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                No se encontraron productos que coincidan con tu búsqueda.
+              </p>
+            </div>
+          )}
+        </div>
       </main>
 
-      <FloatingCart />
+      {/* Floating Cart */}
+      {storeId && <FloatingCart storeId={storeId} />}
     </div>
   );
 }

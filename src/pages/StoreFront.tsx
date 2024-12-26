@@ -9,6 +9,8 @@ import { Instagram, Facebook, MessageCircle, Clock, MapPin } from 'lucide-react'
 import { BasicCart } from '../components/store/BasicCart';
 import { BasicProductCard } from '../components/store/products/BasicProductCard';
 import { isStoreOpen } from '../services/schedule';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 export const StoreFront: React.FC = () => {
   const { storeId } = useParams();
@@ -20,7 +22,10 @@ export const StoreFront: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [store, setStore] = useState<Store | null>(null);
   const [loading, setLoading] = useState(true);
-  const [storeStatus, setStoreStatus] = useState<{ isOpen: boolean; nextChange: string }>({ isOpen: false, nextChange: '' });
+  const [storeStatus, setStoreStatus] = useState<{ isOpen: boolean; nextChange: string }>({ 
+    isOpen: false, 
+    nextChange: 'Cargando...' 
+  });
 
   useEffect(() => {
     const fetchStoreData = async () => {
@@ -53,75 +58,33 @@ export const StoreFront: React.FC = () => {
             )
           `)
           .eq('id', storeId)
-          .eq('status', 'active')
           .single();
 
-        if (storeError) {
-          console.error('Error fetching store:', storeError);
-          return;
-        }
+        if (storeError) throw storeError;
+        if (!storeData) throw new Error('Tienda no encontrada');
 
         setStore(storeData);
 
-        // Procesar el horario
-        let schedule: WeekSchedule;
-        if (storeData.store_schedule?.schedule) {
-          schedule = storeData.store_schedule.schedule;
-        } else {
-          // Horario por defecto
-          schedule = {
-            monday: {
-              isOpen: true,
-              morning: { open: '09:00', close: '13:00' },
-              afternoon: { open: '16:00', close: '20:00' },
-            },
-            tuesday: {
-              isOpen: true,
-              morning: { open: '09:00', close: '13:00' },
-              afternoon: { open: '16:00', close: '20:00' },
-            },
-            wednesday: {
-              isOpen: true,
-              morning: { open: '09:00', close: '13:00' },
-              afternoon: { open: '16:00', close: '20:00' },
-            },
-            thursday: {
-              isOpen: true,
-              morning: { open: '09:00', close: '13:00' },
-              afternoon: { open: '16:00', close: '20:00' },
-            },
-            friday: {
-              isOpen: true,
-              morning: { open: '09:00', close: '13:00' },
-              afternoon: { open: '16:00', close: '20:00' },
-            },
-            saturday: {
-              isOpen: true,
-              morning: { open: '09:00', close: '13:00' },
-              afternoon: { open: '16:00', close: '20:00' },
-            },
-            sunday: {
-              isOpen: false,
-              morning: { open: '09:00', close: '13:00' },
-              afternoon: { open: '16:00', close: '20:00' },
-            },
-          };
-        }
-
-        // Calcular si la tienda está abierta
-        const status = isStoreOpen(schedule);
-        setStoreStatus(status);
-
-        // Actualizar cada minuto
-        const interval = setInterval(() => {
+        // Obtener y configurar el horario
+        const schedule = storeData.store_schedule?.schedule;
+        if (schedule) {
           const status = isStoreOpen(schedule);
           setStoreStatus(status);
-        }, 60000);
 
-        return () => clearInterval(interval);
+          // Actualizar el estado cada minuto
+          const interval = setInterval(() => {
+            const newStatus = isStoreOpen(schedule);
+            setStoreStatus(newStatus);
+          }, 60000);
+
+          return () => clearInterval(interval);
+        } else {
+          setStoreStatus({ isOpen: false, nextChange: 'Horario no configurado' });
+        }
 
       } catch (error) {
         console.error('Error fetching store:', error);
+        toast.error('Error al cargar la tienda');
       } finally {
         setLoading(false);
       }
@@ -242,7 +205,7 @@ export const StoreFront: React.FC = () => {
                 }`}>
                   <Clock className="w-4 h-4 mr-2" />
                   <span>
-                    {storeStatus.isOpen ? 'Abierto' : 'Cerrado'} - {storeStatus.nextChange}
+                    {storeStatus.isOpen ? '¡Abierto!' : 'Cerrado'} • {storeStatus.nextChange}
                   </span>
                 </div>
               </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { format, parse, isWithinInterval, set, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { getStoreSchedule } from '../../../services/schedule';
 
 interface TimeSlot {
   open: string;
@@ -32,27 +33,25 @@ export const StoreScheduleDisplay: React.FC<Props> = ({ storeId, compact = false
   }>({ isOpen: false, nextChange: null, message: '' });
 
   useEffect(() => {
+    console.log('StoreScheduleDisplay mounted with storeId:', storeId);
     fetchSchedule();
   }, [storeId]);
 
   useEffect(() => {
     if (schedule) {
+      console.log('Schedule updated:', schedule);
       updateStoreStatus();
-      const interval = setInterval(updateStoreStatus, 60000); // Actualizar cada minuto
+      const interval = setInterval(updateStoreStatus, 60000);
       return () => clearInterval(interval);
     }
   }, [schedule]);
 
   const fetchSchedule = async () => {
     try {
-      const { data, error } = await supabase
-        .from('store_schedule')
-        .select('schedule')
-        .eq('store_id', storeId)
-        .single();
-
-      if (error) throw error;
-      setSchedule(data?.schedule || null);
+      console.log('Fetching schedule for storeId:', storeId);
+      const scheduleData = await getStoreSchedule(storeId);
+      console.log('Received schedule data:', scheduleData);
+      setSchedule(scheduleData);
     } catch (error) {
       console.error('Error fetching schedule:', error);
     }
@@ -64,13 +63,20 @@ export const StoreScheduleDisplay: React.FC<Props> = ({ storeId, compact = false
   };
 
   const updateStoreStatus = () => {
-    if (!schedule) return;
+    if (!schedule) {
+      console.log('No schedule available');
+      return;
+    }
 
     const now = new Date();
+    console.log('Current time:', now);
     const currentDay = format(now, 'EEEE', { locale: es }).toLowerCase();
+    console.log('Current day:', currentDay);
     const todaySchedule = schedule[currentDay];
+    console.log('Today schedule:', todaySchedule);
 
-    if (!todaySchedule.isOpen) {
+    if (!todaySchedule?.isOpen) {
+      console.log('Store is closed today');
       // Buscar el próximo día que esté abierto
       let nextOpenDay = now;
       let daysChecked = 0;
@@ -79,13 +85,16 @@ export const StoreScheduleDisplay: React.FC<Props> = ({ storeId, compact = false
       while (daysChecked < 7 && !foundNextOpen) {
         nextOpenDay = addDays(nextOpenDay, 1);
         const nextDayName = format(nextOpenDay, 'EEEE', { locale: es }).toLowerCase();
-        if (schedule[nextDayName].isOpen) {
+        console.log('Checking next day:', nextDayName);
+        if (schedule[nextDayName]?.isOpen) {
           foundNextOpen = true;
           const nextOpenTime = parseTimeString(schedule[nextDayName].morning.open, nextOpenDay);
+          const message = `Abre ${format(nextOpenTime, "EEEE 'a las' HH:mm", { locale: es })}`;
+          console.log('Found next open day:', message);
           setStoreStatus({
             isOpen: false,
             nextChange: nextOpenTime,
-            message: `Abre ${format(nextOpenTime, "EEEE 'a las' HH:mm", { locale: es })}`
+            message
           });
         }
         daysChecked++;
@@ -98,66 +107,84 @@ export const StoreScheduleDisplay: React.FC<Props> = ({ storeId, compact = false
     const afternoonOpen = parseTimeString(todaySchedule.afternoon.open, now);
     const afternoonClose = parseTimeString(todaySchedule.afternoon.close, now);
 
+    console.log('Time ranges:', {
+      morning: { open: morningOpen, close: morningClose },
+      afternoon: { open: afternoonOpen, close: afternoonClose }
+    });
+
     // Verificar si estamos en el horario de la mañana
     if (isWithinInterval(now, { start: morningOpen, end: morningClose })) {
+      const message = `Cierra a las ${format(morningClose, 'HH:mm')}`;
+      console.log('Store is open (morning):', message);
       setStoreStatus({
         isOpen: true,
         nextChange: morningClose,
-        message: `Cierra a las ${format(morningClose, 'HH:mm')}`
+        message
       });
       return;
     }
 
     // Verificar si estamos en el horario de la tarde
     if (isWithinInterval(now, { start: afternoonOpen, end: afternoonClose })) {
+      const message = `Cierra a las ${format(afternoonClose, 'HH:mm')}`;
+      console.log('Store is open (afternoon):', message);
       setStoreStatus({
         isOpen: true,
         nextChange: afternoonClose,
-        message: `Cierra a las ${format(afternoonClose, 'HH:mm')}`
+        message
       });
       return;
     }
 
     // Si estamos entre el cierre de la mañana y la apertura de la tarde
-    if (isWithinInterval(now, { start: morningClose, end: afternoonOpen })) {
+    if (now > morningClose && now < afternoonOpen) {
+      const message = `Abre a las ${format(afternoonOpen, 'HH:mm')}`;
+      console.log('Store is in break:', message);
       setStoreStatus({
         isOpen: false,
         nextChange: afternoonOpen,
-        message: `Abre a las ${format(afternoonOpen, 'HH:mm')}`
+        message
       });
       return;
     }
 
     // Si estamos antes de la apertura de la mañana
     if (now < morningOpen) {
+      const message = `Abre a las ${format(morningOpen, 'HH:mm')}`;
+      console.log('Store will open today:', message);
       setStoreStatus({
         isOpen: false,
         nextChange: morningOpen,
-        message: `Abre a las ${format(morningOpen, 'HH:mm')}`
+        message
       });
       return;
     }
 
     // Si estamos después del cierre de la tarde
     if (now > afternoonClose) {
+      console.log('Store is closed for today');
       // Buscar la próxima apertura
       const tomorrow = addDays(now, 1);
       const tomorrowDay = format(tomorrow, 'EEEE', { locale: es }).toLowerCase();
-      if (schedule[tomorrowDay].isOpen) {
+      if (schedule[tomorrowDay]?.isOpen) {
         const nextOpen = parseTimeString(schedule[tomorrowDay].morning.open, tomorrow);
+        const message = `Abre mañana a las ${format(nextOpen, 'HH:mm')}`;
+        console.log('Next opening:', message);
         setStoreStatus({
           isOpen: false,
           nextChange: nextOpen,
-          message: `Abre mañana a las ${format(nextOpen, 'HH:mm')}`
+          message
         });
       }
     }
   };
 
-  if (!schedule) return null;
+  if (!schedule) {
+    console.log('Rendering: No schedule available');
+    return null;
+  }
 
-  const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-  const currentDay = format(new Date(), 'EEEE', { locale: es }).toLowerCase();
+  console.log('Rendering with status:', storeStatus);
 
   if (compact) {
     return (
@@ -166,7 +193,7 @@ export const StoreScheduleDisplay: React.FC<Props> = ({ storeId, compact = false
           storeStatus.isOpen ? 'bg-green-500' : 'bg-red-500'
         }`} />
         <span className="text-sm font-medium">
-          {storeStatus.isOpen ? '¡Abierto!' : 'Cerrado'} • {storeStatus.message}
+          {storeStatus.isOpen ? '¡Abierto!' : 'Cerrado'}{storeStatus.message ? ` • ${storeStatus.message}` : ''}
         </span>
       </div>
     );
@@ -179,30 +206,6 @@ export const StoreScheduleDisplay: React.FC<Props> = ({ storeId, compact = false
           {storeStatus.isOpen ? '¡Abierto!' : 'Cerrado'}
         </p>
         <p className="text-sm">{storeStatus.message}</p>
-      </div>
-
-      <div className="space-y-2">
-        {days.map((day) => (
-          <div 
-            key={day} 
-            className={`p-3 rounded-lg ${day === currentDay ? 'bg-blue-50' : ''} ${!schedule[day].isOpen ? 'opacity-50' : ''}`}
-          >
-            <div className="flex justify-between items-center">
-              <span className="font-medium capitalize">
-                {format(new Date(2024, 0, days.indexOf(day) + 1), 'EEEE', { locale: es })}
-              </span>
-              {!schedule[day].isOpen ? (
-                <span className="text-sm">Cerrado</span>
-              ) : (
-                <div className="text-sm">
-                  <span>{schedule[day].morning.open} - {schedule[day].morning.close}</span>
-                  <span className="mx-1">|</span>
-                  <span>{schedule[day].afternoon.open} - {schedule[day].afternoon.close}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
       </div>
     </div>
   );
