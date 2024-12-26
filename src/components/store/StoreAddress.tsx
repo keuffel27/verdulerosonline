@@ -1,20 +1,49 @@
-import { MapPin } from 'lucide-react';
+import { MapPin, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import type { Store } from '../../types/store';
+import { getStoreSchedule, isStoreOpen } from '../../services/schedule';
 
 interface Props {
   store: Store;
-  isOpen: boolean;
 }
 
-export const StoreAddress = ({ store, isOpen }: Props) => {
+export const StoreAddress = ({ store }: Props) => {
+  const [storeStatus, setStoreStatus] = useState<{ isOpen: boolean; nextChange: string }>({ isOpen: false, nextChange: '' });
+
+  useEffect(() => {
+    const loadScheduleAndStatus = async () => {
+      try {
+        const schedule = await getStoreSchedule(store.id);
+        const status = isStoreOpen(schedule);
+        setStoreStatus(status);
+
+        // Actualizar cada minuto
+        const interval = setInterval(() => {
+          const newStatus = isStoreOpen(schedule);
+          setStoreStatus(newStatus);
+        }, 60000);
+
+        return () => clearInterval(interval);
+      } catch (error) {
+        console.error('Error loading schedule:', error);
+      }
+    };
+
+    loadScheduleAndStatus();
+  }, [store.id]);
+
   return (
     <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
       <div className="bg-white rounded-full shadow-lg px-6 py-2 flex items-center space-x-4">
-        <div className={`flex items-center ${isOpen ? 'text-green-600' : 'text-red-600'}`}>
-          <div className={`w-3 h-3 rounded-full mr-2 ${
-            isOpen ? 'bg-green-500' : 'bg-red-500'
-          }`} />
-          <span className="font-medium">{isOpen ? 'Abierto' : 'Cerrado'}</span>
+        <div className={`inline-flex items-center px-3 py-1 rounded-md text-sm font-medium ${
+          storeStatus.isOpen
+            ? 'bg-green-100 text-green-800'
+            : 'bg-red-100 text-red-800'
+        }`}>
+          <Clock className="w-4 h-4 mr-2" />
+          <span>
+            {storeStatus.isOpen ? 'Abierto' : 'Cerrado'} - {storeStatus.nextChange}
+          </span>
         </div>
         
         {store.address && (

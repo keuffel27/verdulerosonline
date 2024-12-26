@@ -235,23 +235,16 @@ export const StoreFront: React.FC = () => {
               
               {/* Store Status */}
               <div className="flex items-center space-x-4">
-                <div className={`inline-flex items-center px-3 py-1 rounded-full 
-                  ${storeStatus.isOpen 
-                    ? 'bg-green-100 text-green-800 border border-green-200' 
-                    : 'bg-red-100 text-red-800 border border-red-200'
-                  }`}
-                >
-                  <div className={`w-2 h-2 rounded-full mr-2 ${
-                    storeStatus.isOpen ? 'bg-green-500' : 'bg-red-500'
-                  }`} />
-                  <span className="font-medium">{storeStatus.isOpen ? 'Abierto' : 'Cerrado'}</span>
-                </div>
-                {storeStatus.nextChange && (
-                  <span className="text-sm text-gray-500 flex items-center">
-                    <Clock className="w-4 h-4 mr-1" />
-                    {storeStatus.nextChange}
+                <div className={`inline-flex items-center px-4 py-2 rounded-md text-sm font-medium ${
+                  storeStatus.isOpen 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  <Clock className="w-4 h-4 mr-2" />
+                  <span>
+                    {storeStatus.isOpen ? 'Abierto' : 'Cerrado'} - {storeStatus.nextChange}
                   </span>
-                )}
+                </div>
               </div>
             </div>
 

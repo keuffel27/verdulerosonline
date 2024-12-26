@@ -20,9 +20,10 @@ interface Schedule {
 
 interface Props {
   storeId: string;
+  compact?: boolean;
 }
 
-export const StoreScheduleDisplay: React.FC<Props> = ({ storeId }) => {
+export const StoreScheduleDisplay: React.FC<Props> = ({ storeId, compact = false }) => {
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [storeStatus, setStoreStatus] = useState<{
     isOpen: boolean;
@@ -157,6 +158,19 @@ export const StoreScheduleDisplay: React.FC<Props> = ({ storeId }) => {
 
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   const currentDay = format(new Date(), 'EEEE', { locale: es }).toLowerCase();
+
+  if (compact) {
+    return (
+      <div className={`flex items-center ${storeStatus.isOpen ? 'text-green-600' : 'text-red-600'}`}>
+        <div className={`w-2 h-2 rounded-full mr-2 ${
+          storeStatus.isOpen ? 'bg-green-500' : 'bg-red-500'
+        }`} />
+        <span className="text-sm font-medium">
+          {storeStatus.isOpen ? '¡Abierto!' : 'Cerrado'} • {storeStatus.message}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
