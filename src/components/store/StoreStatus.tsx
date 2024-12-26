@@ -196,11 +196,19 @@ export const StoreStatus: React.FC<Props> = ({ storeId }) => {
   }, [storeId]);
 
   return (
-    <div className={`inline-flex items-center px-3 py-1 rounded-md text-sm font-medium ${
-      status.isOpen ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-    }`}>
-      <Clock className="w-4 h-4 mr-2" />
-      <span>{status.message}</span>
+    <div className={`inline-flex items-center px-4 py-2 rounded-xl font-medium transition-all duration-300 ${
+      status.isOpen 
+        ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 shadow-green-100/50' 
+        : 'bg-gradient-to-r from-red-100 to-rose-100 text-red-800 shadow-red-100/50'
+    } shadow-lg hover:shadow-xl transform hover:-translate-y-0.5`}>
+      <div className={`p-1.5 rounded-lg mr-3 ${
+        status.isOpen 
+          ? 'bg-gradient-to-br from-green-500 to-emerald-600' 
+          : 'bg-gradient-to-br from-red-500 to-rose-600'
+      }`}>
+        <Clock className="w-4 h-4 text-white" />
+      </div>
+      <span className="font-semibold">{status.message}</span>
     </div>
   );
 };

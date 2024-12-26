@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { FloatingCart } from '../../components/store/FloatingCart';
-import { Search, MapPin, Clock, Sparkles } from 'lucide-react';
+import { Search, MapPin, Clock, Sparkles, Instagram, Facebook, MessageCircle } from 'lucide-react';
 import type { Database } from '../../lib/database.types';
 import type { Product, Category } from '../../types/store';
 import { ProductCard } from '../../components/store/products/ProductCard';
@@ -22,6 +22,11 @@ export default function StorePage() {
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [appearance, setAppearance] = useState<Store['store_appearance'] | null>(null);
+  const [socialMedia, setSocialMedia] = useState<{
+    instagram?: string;
+    facebook?: string;
+    whatsapp?: string;
+  }>({});
   const cart = useCart();
 
   const addToCart = (product: Product, presentationId: string, quantity: number) => {
@@ -51,6 +56,7 @@ export default function StorePage() {
       fetchStore();
       fetchProducts();
       fetchCategories();
+      fetchSocialMedia();
     }
   }, [storeId]);
 
@@ -130,6 +136,24 @@ export default function StorePage() {
       setCategories(data || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
+    }
+  };
+
+  const fetchSocialMedia = async () => {
+    if (!storeId) return;
+    
+    const { data, error } = await supabase
+      .from('store_social_media')
+      .select('*')
+      .eq('store_id', storeId)
+      .single();
+
+    if (!error && data) {
+      setSocialMedia({
+        instagram: data.instagram_url,
+        facebook: data.facebook_url,
+        whatsapp: data.whatsapp_number,
+      });
     }
   };
 
@@ -231,6 +255,14 @@ export default function StorePage() {
               className="text-center"
             >
               <motion.h1 
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ 
+                  type: "spring",
+                  stiffness: 200,
+                  damping: 15,
+                  delay: 0.4
+                }}
                 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-2 drop-shadow-lg"
               >
                 {store?.name}
@@ -253,21 +285,79 @@ export default function StorePage() {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 1 }}
-              className="bg-white/90 backdrop-blur-sm rounded-full shadow-lg px-6 py-2 flex items-center space-x-4"
+              className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl px-8 py-3 flex items-center space-x-6 border border-white/20"
             >
-              {storeId && <StoreStatus storeId={storeId} />}
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 1.2 }}
+              >
+                {storeId && <StoreStatus storeId={storeId} />}
+              </motion.div>
               
               {appearance?.store_address && (
                 <>
-                  <div className="w-px h-6 bg-gray-300" />
+                  <div className="h-8 w-px bg-gradient-to-b from-gray-200 via-gray-300 to-gray-200" />
                   <motion.div 
                     initial={{ x: -20, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 1.2 }}
-                    className="flex items-center text-gray-800"
+                    transition={{ delay: 1.4 }}
+                    className="flex items-center text-gray-700 group hover:text-gray-900 transition-colors"
                   >
-                    <MapPin className="w-4 h-4 mr-1" />
-                    <span className="text-sm">{appearance.store_address}</span>
+                    <div className="p-2 bg-gray-100 rounded-full group-hover:bg-gray-200 transition-colors mr-3">
+                      <MapPin className="w-5 h-5" />
+                    </div>
+                    <span className="text-sm font-medium">{appearance.store_address}</span>
+                  </motion.div>
+
+                  {/* Separador para redes sociales */}
+                  <div className="h-8 w-px bg-gradient-to-b from-gray-200 via-gray-300 to-gray-200" />
+                  
+                  {/* Botones de redes sociales */}
+                  <motion.div 
+                    initial={{ x: -20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 1.6 }}
+                    className="flex items-center space-x-3"
+                  >
+                    {socialMedia.instagram && (
+                      <motion.a
+                        href={socialMedia.instagram}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full text-white hover:shadow-lg transition-shadow"
+                      >
+                        <Instagram className="w-5 h-5" />
+                      </motion.a>
+                    )}
+                    
+                    {socialMedia.facebook && (
+                      <motion.a
+                        href={socialMedia.facebook}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full text-white hover:shadow-lg transition-shadow"
+                      >
+                        <Facebook className="w-5 h-5" />
+                      </motion.a>
+                    )}
+                    
+                    {socialMedia.whatsapp && (
+                      <motion.a
+                        href={`https://wa.me/${socialMedia.whatsapp}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-full text-white hover:shadow-lg transition-shadow"
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                      </motion.a>
+                    )}
                   </motion.div>
                 </>
               )}
@@ -279,46 +369,59 @@ export default function StorePage() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Search and Categories */}
-        <div className="mb-8 space-y-6">
+        <div className="mb-12 space-y-8">
           {/* Search Bar */}
-          <div className="max-w-xl mx-auto">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Buscar productos..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 rounded-full border-gray-200 bg-white shadow-sm 
-                         focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              />
-              <Search className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
+          <div className="max-w-2xl mx-auto">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl blur-xl opacity-25 group-hover:opacity-40 transition-opacity"></div>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Buscar productos..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-14 pr-6 py-4 rounded-2xl border-0 bg-white shadow-lg 
+                           focus:ring-2 focus:ring-green-500 focus:border-transparent
+                           placeholder-gray-400 transition-shadow duration-300
+                           group-hover:shadow-xl"
+                />
+                <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400 group-hover:text-gray-600 transition-colors" />
+              </div>
             </div>
           </div>
 
           {/* Categories */}
-          <div className="flex flex-wrap justify-center gap-2">
-            <button
+          <div className="flex flex-wrap justify-center gap-3">
+            <motion.button
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
               onClick={() => setSelectedCategory('all')}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors
-                ${selectedCategory === 'all'
-                  ? 'bg-green-100 text-green-800 border border-green-200 shadow-sm'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+              className={`px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300
+                transform hover:-translate-y-0.5 hover:shadow-lg ${
+                selectedCategory === 'all'
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md shadow-green-500/20'
+                  : 'bg-white text-gray-600 border border-gray-200 hover:border-green-300 hover:bg-green-50'
                 }`}
             >
               Todas las categorías
-            </button>
-            {categories.map((category) => (
-              <button
+            </motion.button>
+            {categories.map((category, index) => (
+              <motion.button
                 key={category.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 + (index + 1) * 0.05 }}
                 onClick={() => setSelectedCategory(category.id)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors
-                  ${selectedCategory === category.id
-                    ? 'bg-green-100 text-green-800 border border-green-200 shadow-sm'
-                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                className={`px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300
+                  transform hover:-translate-y-0.5 hover:shadow-lg ${
+                  selectedCategory === category.id
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md shadow-green-500/20'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:border-green-300 hover:bg-green-50'
                   }`}
               >
                 {category.name}
-              </button>
+              </motion.button>
             ))}
           </div>
         </div>
