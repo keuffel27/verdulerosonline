@@ -69,6 +69,7 @@ export const StoreScheduleDisplay: React.FC<Props> = ({ storeId, compact = false
     }
 
     const now = new Date();
+    console.log('ESTOY AQUÍ - HORARIOS!', now);
     console.log('Current time:', now);
     const currentDay = format(now, 'EEEE', { locale: es }).toLowerCase();
     console.log('Current day:', currentDay);

@@ -155,22 +155,22 @@ export const StoreStatus: React.FC<Props> = ({ storeId }) => {
       if (isMorningTime) {
         setStatus({
           isOpen: true,
-          message: `¡Abierto! • Cierra a las ${todaySchedule.morning.close}`
+          message: `Abierto • Cierra en el turno mañana a las ${todaySchedule.morning.close}`
         });
       } else if (isAfternoonTime) {
         setStatus({
           isOpen: true,
-          message: `¡Abierto! • Cierra a las ${todaySchedule.afternoon.close}`
+          message: `Abierto • Cierra en el turno tarde a las ${todaySchedule.afternoon.close}`
         });
       } else if (currentTime < todaySchedule.morning.open) {
         setStatus({
           isOpen: false,
-          message: `Cerrado • Abre hoy a las ${todaySchedule.morning.open}`
+          message: `Cerrado • Abre en el turno mañana a las ${todaySchedule.morning.open}`
         });
       } else if (currentTime < todaySchedule.afternoon.open) {
         setStatus({
           isOpen: false,
-          message: `Cerrado • Abre a las ${todaySchedule.afternoon.open}`
+          message: `Cerrado • Abre en el turno tarde a las ${todaySchedule.afternoon.open}`
         });
       } else {
         // Después del cierre de la tarde
@@ -179,13 +179,40 @@ export const StoreStatus: React.FC<Props> = ({ storeId }) => {
         if (schedule[tomorrowDay]?.isOpen) {
           setStatus({
             isOpen: false,
-            message: `Cerrado • Abre mañana a las ${schedule[tomorrowDay].morning.open}`
+            message: `Cerrado • Abre mañana en el turno mañana a las ${schedule[tomorrowDay].morning.open}`
           });
         } else {
-          setStatus({
-            isOpen: false,
-            message: 'Cerrado'
-          });
+          // Buscar el próximo día que abre
+          const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+          const currentDayIndex = days.indexOf(currentDay);
+          let nextOpenDay = '';
+          let daysUntilOpen = 0;
+
+          for (let i = 2; i <= 7; i++) {
+            const checkIndex = (currentDayIndex + i) % 7;
+            if (schedule[days[checkIndex]]?.isOpen) {
+              nextOpenDay = days[checkIndex];
+              daysUntilOpen = i;
+              break;
+            }
+          }
+
+          if (nextOpenDay) {
+            const nextDayName = format(
+              new Date(now.getTime() + daysUntilOpen * 24 * 60 * 60 * 1000),
+              'EEEE',
+              { locale: es }
+            );
+            setStatus({
+              isOpen: false,
+              message: `Cerrado • Abre el ${nextDayName} en el turno mañana a las ${schedule[nextOpenDay].morning.open}`
+            });
+          } else {
+            setStatus({
+              isOpen: false,
+              message: 'Cerrado permanentemente'
+            });
+          }
         }
       }
     };

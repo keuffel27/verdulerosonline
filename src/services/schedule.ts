@@ -66,37 +66,59 @@ export async function getStoreSchedule(storeId: string): Promise<WeekSchedule> {
 }
 
 export async function updateStoreSchedule(storeId: string, schedule: WeekSchedule): Promise<void> {
-  const { error } = await supabase
+  // Primero intentamos actualizar el registro existente
+  const { error: updateError } = await supabase
     .from('store_schedule')
-    .upsert([{ store_id: storeId, schedule }]);
+    .update({ schedule })
+    .eq('store_id', storeId);
 
-  if (error) throw error;
+  // Si no existe el registro, lo creamos
+  if (updateError) {
+    const { error: insertError } = await supabase
+      .from('store_schedule')
+      .insert([{ store_id: storeId, schedule }]);
+
+    if (insertError) throw insertError;
+  }
 }
 
-function parseTimeString(timeStr: string, baseDate: Date = new Date()): Date {
+function parseTimeString(timeStr: string, baseDate: Date): Date {
   const [hours, minutes] = timeStr.split(':').map(Number);
   const result = new Date(baseDate);
   result.setHours(hours, minutes, 0, 0);
   return result;
 }
 
-function getCurrentTimeString(): string {
-  const now = new Date();
-  return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-}
+// Mapeo de días en español a inglés
+const dayMapping = {
+  'lunes': 'monday',
+  'martes': 'tuesday',
+  'miércoles': 'wednesday',
+  'jueves': 'thursday',
+  'viernes': 'friday',
+  'sábado': 'saturday',
+  'domingo': 'sunday'
+};
 
 export function isStoreOpen(schedule: WeekSchedule): { isOpen: boolean; nextChange: string } {
   const now = new Date();
-  const currentDay = format(now, 'EEEE', { locale: es }).toLowerCase();
+  const currentDaySpanish = format(now, 'EEEE', { locale: es }).toLowerCase();
+  const currentDay = dayMapping[currentDaySpanish];
   const todaySchedule = schedule[currentDay];
-  const currentTime = getCurrentTimeString();
+
+  console.log('Debug isStoreOpen:', {
+    now: now.toLocaleTimeString(),
+    currentDaySpanish,
+    currentDay,
+    todaySchedule,
+  });
 
   // Si el día está marcado como cerrado
   if (!todaySchedule?.isOpen) {
-    // Buscar el próximo día que abre
     const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     const currentDayIndex = days.indexOf(currentDay);
     
+    // Buscar el próximo día que abra
     for (let i = 1; i <= 7; i++) {
       const nextDayIndex = (currentDayIndex + i) % 7;
       const nextDay = days[nextDayIndex];
@@ -105,48 +127,69 @@ export function isStoreOpen(schedule: WeekSchedule): { isOpen: boolean; nextChan
         const nextDayName = format(nextOpenDate, 'EEEE', { locale: es });
         return {
           isOpen: false,
-          nextChange: `Abre ${i === 1 ? 'mañana' : nextDayName} a las ${schedule[nextDay].morning.open}`
+          nextChange: `Abre ${i === 1 ? 'mañana' : 'el ' + nextDayName} a las ${schedule[nextDay].morning.open}`
         };
       }
     }
-    return { isOpen: false, nextChange: 'Cerrado' };
+    return { isOpen: false, nextChange: 'Cerrado permanentemente' };
   }
 
-  // Comprobar si estamos en el horario de la mañana
-  if (currentTime >= todaySchedule.morning.open && currentTime < todaySchedule.morning.close) {
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+  const currentTime = currentHour * 60 + currentMinute;
+
+  // Convertir horarios a minutos desde medianoche para comparación más fácil
+  const morningOpenTime = timeToMinutes(todaySchedule.morning.open);
+  const morningCloseTime = timeToMinutes(todaySchedule.morning.close);
+  const afternoonOpenTime = timeToMinutes(todaySchedule.afternoon.open);
+  const afternoonCloseTime = timeToMinutes(todaySchedule.afternoon.close);
+
+  console.log('Debug tiempos:', {
+    currentTime,
+    morningOpenTime,
+    morningCloseTime,
+    afternoonOpenTime,
+    afternoonCloseTime
+  });
+
+  // Verificar si estamos en horario de mañana
+  if (currentTime >= morningOpenTime && currentTime < morningCloseTime) {
+    const minutesUntilClose = morningCloseTime - currentTime;
     return {
       isOpen: true,
-      nextChange: `Cierra a las ${todaySchedule.morning.close}`
+      nextChange: formatTimeMessage(minutesUntilClose, 'Cierra')
     };
   }
 
-  // Comprobar si estamos en el horario de la tarde
-  if (currentTime >= todaySchedule.afternoon.open && currentTime < todaySchedule.afternoon.close) {
+  // Verificar si estamos en horario de tarde
+  if (currentTime >= afternoonOpenTime && currentTime < afternoonCloseTime) {
+    const minutesUntilClose = afternoonCloseTime - currentTime;
     return {
       isOpen: true,
-      nextChange: `Cierra a las ${todaySchedule.afternoon.close}`
+      nextChange: formatTimeMessage(minutesUntilClose, 'Cierra')
     };
   }
 
-  // Si estamos antes del horario de apertura de la mañana
-  if (currentTime < todaySchedule.morning.open) {
+  // Si estamos antes del horario de mañana
+  if (currentTime < morningOpenTime) {
+    const minutesUntilOpen = morningOpenTime - currentTime;
     return {
       isOpen: false,
-      nextChange: `Abre hoy a las ${todaySchedule.morning.open}`
+      nextChange: formatTimeMessage(minutesUntilOpen, 'Abre')
     };
   }
 
   // Si estamos en el descanso del mediodía
-  if (currentTime >= todaySchedule.morning.close && currentTime < todaySchedule.afternoon.open) {
+  if (currentTime >= morningCloseTime && currentTime < afternoonOpenTime) {
+    const minutesUntilOpen = afternoonOpenTime - currentTime;
     return {
       isOpen: false,
-      nextChange: `Abre a las ${todaySchedule.afternoon.open}`
+      nextChange: formatTimeMessage(minutesUntilOpen, 'Abre')
     };
   }
 
   // Si estamos después del cierre de la tarde
-  if (currentTime >= todaySchedule.afternoon.close) {
-    // Buscar el próximo día que abre
+  if (currentTime >= afternoonCloseTime) {
     const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     const currentDayIndex = days.indexOf(currentDay);
     const tomorrow = days[(currentDayIndex + 1) % 7];
@@ -158,7 +201,7 @@ export function isStoreOpen(schedule: WeekSchedule): { isOpen: boolean; nextChan
       };
     }
 
-    // Si mañana no abre, buscar el próximo día que abra
+    // Buscar el próximo día que abra
     for (let i = 2; i <= 7; i++) {
       const nextDayIndex = (currentDayIndex + i) % 7;
       const nextDay = days[nextDayIndex];
@@ -173,4 +216,24 @@ export function isStoreOpen(schedule: WeekSchedule): { isOpen: boolean; nextChan
   }
 
   return { isOpen: false, nextChange: 'Cerrado' };
+}
+
+function timeToMinutes(timeStr: string): number {
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+function formatTimeMessage(minutes: number, prefix: string): string {
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  
+  if (hours === 0) {
+    return `${prefix} en ${remainingMinutes} minuto${remainingMinutes !== 1 ? 's' : ''}`;
+  }
+  
+  if (remainingMinutes === 0) {
+    return `${prefix} en ${hours} hora${hours !== 1 ? 's' : ''}`;
+  }
+  
+  return `${prefix} en ${hours} hora${hours !== 1 ? 's' : ''} y ${remainingMinutes} minuto${remainingMinutes !== 1 ? 's' : ''}`;
 }

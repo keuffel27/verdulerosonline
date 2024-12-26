@@ -77,7 +77,14 @@ export default function StoreSchedule() {
       setSchedule(data);
     } catch (error) {
       console.error('Error loading schedule:', error);
-      toast.error('Error al cargar el horario');
+      toast.error('Error al cargar el horario', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     } finally {
       setLoading(false);
     }
@@ -88,8 +95,15 @@ export default function StoreSchedule() {
 
     setSaving(true);
     try {
+      console.log('Guardando horario:', schedule);
       await updateStoreSchedule(storeId, schedule);
-      toast.success('Horario actualizado exitosamente', {
+      
+      // Refrescar el estado inmediatamente
+      const status = isStoreOpen(schedule);
+      console.log('Nuevo estado:', status);
+      setStoreStatus(status);
+      
+      toast.success('Horario guardado correctamente', {
         position: "top-right",
         autoClose: 3000,
         hideProgressBar: false,
@@ -169,6 +183,11 @@ export default function StoreSchedule() {
               </h3>
               <p className="mt-1 text-sm text-gray-500">
                 Configura los horarios de apertura y cierre de tu tienda.
+              </p>
+              <p className="mt-1 text-sm text-blue-500">
+                Hora actual: {new Date().toLocaleTimeString()} - 
+                Estado: {storeStatus.isOpen ? 'Abierto' : 'Cerrado'} - 
+                {storeStatus.nextChange}
               </p>
             </div>
             <div className="mt-4 sm:mt-0">

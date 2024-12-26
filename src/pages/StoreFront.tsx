@@ -205,7 +205,7 @@ export const StoreFront: React.FC = () => {
                 }`}>
                   <Clock className="w-4 h-4 mr-2" />
                   <span>
-                    {storeStatus.isOpen ? '¡Abierto!' : 'Cerrado'} • {storeStatus.nextChange}
+                    {storeStatus.isOpen ? 'Abierto' : 'Cerrado'} - {storeStatus.nextChange}
                   </span>
                 </div>
               </div>

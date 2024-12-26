@@ -102,12 +102,42 @@ CREATE POLICY "Permitir eliminación de apariencia por dueños" ON store_appeara
     )
   );
 
--- Política para permitir lectura pública de redes sociales
-CREATE POLICY "Permitir lectura pública de redes sociales" ON store_social_media
+-- Políticas para store_schedule
+CREATE POLICY "Permitir lectura pública de horarios" ON store_schedule
   FOR SELECT
   USING (true);
 
--- Política para permitir lectura pública de horarios
-CREATE POLICY "Permitir lectura pública de horarios" ON store_schedule
+CREATE POLICY "Permitir inserción de horarios por dueños" ON store_schedule
+  FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM stores
+      WHERE id = store_id
+      AND owner_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Permitir actualización de horarios por dueños" ON store_schedule
+  FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM stores
+      WHERE id = store_id
+      AND owner_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Permitir eliminación de horarios por dueños" ON store_schedule
+  FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM stores
+      WHERE id = store_id
+      AND owner_id = auth.uid()
+    )
+  );
+
+-- Política para permitir lectura pública de redes sociales
+CREATE POLICY "Permitir lectura pública de redes sociales" ON store_social_media
   FOR SELECT
   USING (true);

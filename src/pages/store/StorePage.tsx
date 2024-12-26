@@ -8,7 +8,7 @@ import type { Product, Category } from '../../types/store';
 import { ProductCard } from '../../components/store/products/ProductCard';
 import { useCart } from '../../hooks/useCart';
 import { motion, AnimatePresence } from 'framer-motion';
-import { StoreStatus } from '../../components/store/StoreStatus';
+import { isStoreOpen } from '../../services/schedule';
 
 type Store = Database['public']['Tables']['stores']['Row'];
 
@@ -20,6 +20,10 @@ export default function StorePage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [storeStatus, setStoreStatus] = useState<{ isOpen: boolean; nextChange: string }>({ 
+    isOpen: false, 
+    nextChange: 'Cargando...' 
+  });
   const [isOpen, setIsOpen] = useState(false);
   const [appearance, setAppearance] = useState<Store['store_appearance'] | null>(null);
   const [socialMedia, setSocialMedia] = useState<{
@@ -75,6 +79,20 @@ export default function StorePage() {
       if (error) throw error;
       setStore(storeData);
       setAppearance(storeData.store_appearance);
+
+      // Configurar el estado de la tienda
+      if (storeData.store_schedule?.schedule) {
+        const status = isStoreOpen(storeData.store_schedule.schedule);
+        setStoreStatus(status);
+
+        // Actualizar el estado cada minuto
+        const interval = setInterval(() => {
+          const newStatus = isStoreOpen(storeData.store_schedule.schedule);
+          setStoreStatus(newStatus);
+        }, 60000);
+
+        return () => clearInterval(interval);
+      }
     } catch (error) {
       console.error('Error fetching store:', error);
     }
@@ -291,8 +309,16 @@ export default function StorePage() {
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 1.2 }}
+                className={`inline-flex items-center px-4 py-2 rounded-md text-sm font-medium ${
+                  storeStatus.isOpen 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-red-100 text-red-800'
+                }`}
               >
-                {storeId && <StoreStatus storeId={storeId} />}
+                <Clock className="w-4 h-4 mr-2" />
+                <span>
+                  {storeStatus.isOpen ? 'Abierto' : 'Cerrado'} - {storeStatus.nextChange}
+                </span>
               </motion.div>
               
               {appearance?.store_address && (
