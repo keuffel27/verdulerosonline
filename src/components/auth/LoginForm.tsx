@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { motion } from 'framer-motion';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { Button } from '../ui/Button';
 import toast from 'react-hot-toast';
@@ -146,60 +147,100 @@ export const LoginForm: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.2 }}
+      className="space-y-6"
+    >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div>
+        <motion.div
+          initial={{ x: -20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
           <label htmlFor="email" className="block text-sm font-medium text-gray-700">
             Email
           </label>
-          <input
+          <motion.input
+            whileFocus={{ scale: 1.01 }}
             id="email"
             type="email"
             autoComplete="email"
             {...register('email')}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+            className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm transition-all duration-200 hover:border-green-400"
             disabled={isLoading}
           />
           {errors.email && (
-            <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mt-1 text-sm text-red-600"
+            >
+              {errors.email.message}
+            </motion.p>
           )}
-        </div>
+        </motion.div>
 
-        <div>
+        <motion.div
+          initial={{ x: -20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.4 }}
+        >
           <label htmlFor="password" className="block text-sm font-medium text-gray-700">
             Contraseña
           </label>
-          <input
+          <motion.input
+            whileFocus={{ scale: 1.01 }}
             id="password"
             type="password"
             autoComplete="current-password"
             {...register('password')}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+            className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm transition-all duration-200 hover:border-green-400"
             disabled={isLoading}
           />
           {errors.password && (
-            <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mt-1 text-sm text-red-600"
+            >
+              {errors.password.message}
+            </motion.p>
           )}
-        </div>
+        </motion.div>
 
-        <Button
-          type="submit"
-          disabled={isLoading}
-          loading={isLoading}
-          className="w-full"
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.5 }}
         >
-          {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-        </Button>
+          <Button
+            type="submit"
+            disabled={isLoading}
+            loading={isLoading}
+            className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+          </Button>
+        </motion.div>
       </form>
 
-      <div className="text-sm text-center">
+      <motion.div 
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.6 }}
+        className="text-sm text-center"
+      >
         <p className="text-gray-600">
           ¿No tienes una cuenta?{' '}
-          <Link to="/register" className="text-green-600 hover:text-green-500">
-            Regístrate aquí
-          </Link>
+          <motion.span whileHover={{ scale: 1.05 }}>
+            <Link to="/register" className="text-green-600 hover:text-green-500 font-medium">
+              Regístrate aquí
+            </Link>
+          </motion.span>
         </p>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

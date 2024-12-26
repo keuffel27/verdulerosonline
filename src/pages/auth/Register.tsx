@@ -1,9 +1,30 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Store } from 'lucide-react';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { Button } from '../../components/ui/Button';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { 
+    opacity: 1,
+    transition: { 
+      duration: 0.5,
+      staggerChildren: 0.1 
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: { 
+    y: 0, 
+    opacity: 1,
+    transition: { duration: 0.5 }
+  }
+};
 
 export const Register: React.FC = () => {
   const navigate = useNavigate();
@@ -103,118 +124,157 @@ export const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
+    <motion.div 
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+      className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8"
+    >
+      <motion.div 
+        variants={itemVariants}
+        className="sm:mx-auto sm:w-full sm:max-w-md"
+      >
+        <motion.div 
+          className="flex justify-center"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
           <Store className="w-12 h-12 text-green-600" />
-        </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        </motion.div>
+        <motion.h2 
+          variants={itemVariants}
+          className="mt-6 text-center text-3xl font-extrabold text-gray-900 bg-gradient-to-r from-green-600 to-green-400 bg-clip-text text-transparent"
+        >
           Crear una cuenta
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
+        </motion.h2>
+        <motion.p 
+          variants={itemVariants}
+          className="mt-2 text-center text-sm text-gray-600"
+        >
           ¿Ya tienes una cuenta?{' '}
-          <Link to="/auth/login" className="font-medium text-green-600 hover:text-green-500">
-            Inicia sesión
-          </Link>
-        </p>
-      </div>
+          <motion.span whileHover={{ scale: 1.05 }}>
+            <Link to="/auth/login" className="font-medium text-green-600 hover:text-green-500">
+              Inicia sesión
+            </Link>
+          </motion.span>
+        </motion.p>
+      </motion.div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+      <motion.div 
+        variants={itemVariants}
+        className="mt-8 sm:mx-auto sm:w-full sm:max-w-md"
+      >
+        <motion.div 
+          variants={itemVariants}
+          className="bg-white/80 backdrop-blur-sm py-8 px-4 shadow-lg sm:rounded-xl sm:px-10 border border-green-100"
+          whileHover={{ boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
+        >
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
+            <motion.div variants={itemVariants}>
               <label htmlFor="storeName" className="block text-sm font-medium text-gray-700">
                 Nombre de la tienda
               </label>
-              <input
+              <motion.input
+                whileFocus={{ scale: 1.01 }}
                 id="storeName"
                 name="storeName"
                 type="text"
                 required
                 value={formData.storeName}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm transition-all duration-200 hover:border-green-400"
                 placeholder="Ej: Mi Tienda Online"
               />
-            </div>
+            </motion.div>
 
-            <div>
+            <motion.div variants={itemVariants}>
               <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700">
                 Nombre del propietario
               </label>
-              <input
+              <motion.input
+                whileFocus={{ scale: 1.01 }}
                 id="ownerName"
                 name="ownerName"
                 type="text"
                 required
                 value={formData.ownerName}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm transition-all duration-200 hover:border-green-400"
                 placeholder="Tu nombre completo"
               />
-            </div>
+            </motion.div>
 
-            <div>
+            <motion.div variants={itemVariants}>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email
               </label>
-              <input
+              <motion.input
+                whileFocus={{ scale: 1.01 }}
                 id="email"
                 name="email"
                 type="email"
                 required
                 value={formData.email}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm transition-all duration-200 hover:border-green-400"
                 placeholder="tu@email.com"
               />
-            </div>
+            </motion.div>
 
-            <div>
+            <motion.div variants={itemVariants}>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Contraseña
               </label>
-              <input
+              <motion.input
+                whileFocus={{ scale: 1.01 }}
                 id="password"
                 name="password"
                 type="password"
                 required
                 value={formData.password}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm transition-all duration-200 hover:border-green-400"
                 placeholder="••••••••"
                 minLength={6}
               />
-            </div>
+            </motion.div>
 
-            <div>
+            <motion.div variants={itemVariants}>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
                 Confirmar contraseña
               </label>
-              <input
+              <motion.input
+                whileFocus={{ scale: 1.01 }}
                 id="confirmPassword"
                 name="confirmPassword"
                 type="password"
                 required
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm transition-all duration-200 hover:border-green-400"
                 placeholder="••••••••"
                 minLength={6}
               />
-            </div>
+            </motion.div>
 
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            <motion.div 
+              variants={itemVariants}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
-              {isLoading ? 'Registrando...' : 'Registrarse'}
-            </Button>
+              <Button
+                type="submit"
+                disabled={isLoading}
+                loading={isLoading}
+                className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? 'Creando cuenta...' : 'Crear cuenta'}
+              </Button>
+            </motion.div>
           </form>
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      </motion.div>
+    </motion.div>
   );
 };
 
