@@ -5,6 +5,12 @@ export interface StoreAppearance {
   store_id: string;
   logo_url: string | null;
   banner_url: string | null;
+  display_name: string | null;
+  products_background_url: string | null;
+  store_address: string | null;
+  welcome_text: string | null;
+  created_at?: string;
+  updated_at?: string;
   primary_color: string;
   secondary_color: string;
 }
@@ -52,6 +58,10 @@ export async function getStoreAppearance(storeId: string): Promise<StoreAppearan
         store_id: storeId,
         logo_url: null,
         banner_url: null,
+        display_name: null,
+        products_background_url: null,
+        store_address: null,
+        welcome_text: null,
         primary_color: '#4F46E5',
         secondary_color: '#10B981'
       };
@@ -61,6 +71,10 @@ export async function getStoreAppearance(storeId: string): Promise<StoreAppearan
       store_id: storeId,
       logo_url: null,
       banner_url: null,
+      display_name: null,
+      products_background_url: null,
+      store_address: null,
+      welcome_text: null,
       primary_color: '#4F46E5',
       secondary_color: '#10B981'
     };
@@ -70,6 +84,10 @@ export async function getStoreAppearance(storeId: string): Promise<StoreAppearan
       store_id: storeId,
       logo_url: null,
       banner_url: null,
+      display_name: null,
+      products_background_url: null,
+      store_address: null,
+      welcome_text: null,
       primary_color: '#4F46E5',
       secondary_color: '#10B981'
     };

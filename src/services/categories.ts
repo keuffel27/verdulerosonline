@@ -45,9 +45,18 @@ export async function deleteCategory(categoryId: string): Promise<void> {
 }
 
 export async function updateCategoriesOrder(categories: { id: string; order_index: number }[]): Promise<void> {
-  const { error } = await supabase
-    .from('store_categories')
-    .upsert(categories);
+  // Actualizar cada categoría individualmente para asegurar la actualización
+  const promises = categories.map(({ id, order_index }) => 
+    supabase
+      .from('store_categories')
+      .update({ order_index })
+      .eq('id', id)
+  );
 
-  if (error) throw error;
+  try {
+    await Promise.all(promises);
+  } catch (error) {
+    console.error('Error updating categories order:', error);
+    throw error;
+  }
 }

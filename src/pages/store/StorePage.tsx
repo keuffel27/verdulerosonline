@@ -283,7 +283,7 @@ export default function StorePage() {
                 }}
                 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-2 drop-shadow-lg"
               >
-                {store?.name}
+                {appearance?.display_name || store?.name}
               </motion.h1>
               
               {appearance?.welcome_text && (
@@ -393,96 +393,151 @@ export default function StorePage() {
       </div>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search and Categories */}
-        <div className="mb-12 space-y-8">
-          {/* Search Bar */}
-          <div className="max-w-2xl mx-auto">
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl blur-xl opacity-25 group-hover:opacity-40 transition-opacity"></div>
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Buscar productos..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-14 pr-6 py-4 rounded-2xl border-0 bg-white shadow-lg 
-                           focus:ring-2 focus:ring-green-500 focus:border-transparent
-                           placeholder-gray-400 transition-shadow duration-300
-                           group-hover:shadow-xl"
-                />
-                <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400 group-hover:text-gray-600 transition-colors" />
-              </div>
-            </div>
-          </div>
-
-          {/* Categories */}
-          <div className="flex flex-wrap justify-center gap-3">
-            <motion.button
-              initial={{ opacity: 0, y: 20 }}
+      <main className="relative">
+        {/* Sección de Productos */}
+        <div 
+          className="min-h-screen relative"
+          style={{
+            backgroundImage: appearance?.products_background_url ? `url(${appearance.products_background_url})` : 'none',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundAttachment: 'fixed'
+          }}
+        >
+          <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" />
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+            {/* Search and Categories */}
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              onClick={() => setSelectedCategory('all')}
-              className={`px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300
-                transform hover:-translate-y-0.5 hover:shadow-lg ${
-                selectedCategory === 'all'
-                  ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md shadow-green-500/20'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:border-green-300 hover:bg-green-50'
-                }`}
+              transition={{ duration: 0.5 }}
+              className="space-y-8"
             >
-              Todas las categorías
-            </motion.button>
-            {categories.map((category, index) => (
-              <motion.button
-                key={category.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 + (index + 1) * 0.05 }}
-                onClick={() => setSelectedCategory(category.id)}
-                className={`px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300
-                  transform hover:-translate-y-0.5 hover:shadow-lg ${
-                  selectedCategory === category.id
-                    ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md shadow-green-500/20'
-                    : 'bg-white text-gray-600 border border-gray-200 hover:border-green-300 hover:bg-green-50'
-                  }`}
-              >
-                {category.name}
-              </motion.button>
-            ))}
-          </div>
-        </div>
-
-        {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {loading ? (
-            // Loading skeleton
-            Array.from({ length: 8 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-lg shadow-sm p-4 space-y-4 animate-pulse"
-              >
-                <div className="w-full h-48 bg-gray-200 rounded-lg" />
-                <div className="h-4 bg-gray-200 rounded w-3/4" />
-                <div className="h-4 bg-gray-200 rounded w-1/2" />
+              {/* Search Bar */}
+              <div className="max-w-2xl mx-auto">
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl blur-xl opacity-25 group-hover:opacity-40 transition-opacity"></div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Buscar productos..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-14 pr-6 py-4 rounded-2xl border-0 bg-white/90 backdrop-blur-sm shadow-lg 
+                               focus:ring-2 focus:ring-green-500 focus:border-transparent
+                               placeholder-gray-400 transition-shadow duration-300
+                               group-hover:shadow-xl"
+                    />
+                    <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                  </div>
+                </div>
               </div>
-            ))
-          ) : filteredProducts.length > 0 ? (
-            filteredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onAddToCart={handleAddToCart}
-              />
-            ))
-          ) : (
-            <div className="col-span-full text-center py-12">
-              <Sparkles className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No hay productos</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                No se encontraron productos que coincidan con tu búsqueda.
-              </p>
-            </div>
-          )}
+
+              {/* Categories */}
+              <motion.div 
+                className="flex flex-wrap justify-center gap-3"
+                variants={{
+                  hidden: { opacity: 0 },
+                  show: {
+                    opacity: 1,
+                    transition: {
+                      staggerChildren: 0.05
+                    }
+                  }
+                }}
+                initial="hidden"
+                animate="show"
+              >
+                <motion.button
+                  variants={{
+                    hidden: { opacity: 0, y: 20 },
+                    show: { opacity: 1, y: 0 }
+                  }}
+                  onClick={() => setSelectedCategory('all')}
+                  className={`px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300
+                    transform hover:-translate-y-0.5 hover:shadow-lg ${
+                    selectedCategory === 'all'
+                      ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md shadow-green-500/20'
+                      : 'bg-white/90 backdrop-blur-sm text-gray-600 border border-gray-200 hover:border-green-300 hover:bg-green-50'
+                    }`}
+                >
+                  Todas las categorías
+                </motion.button>
+                {categories.map((category) => (
+                  <motion.button
+                    key={category.id}
+                    variants={{
+                      hidden: { opacity: 0, y: 20 },
+                      show: { opacity: 1, y: 0 }
+                    }}
+                    onClick={() => setSelectedCategory(category.id)}
+                    className={`px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300
+                      transform hover:-translate-y-0.5 hover:shadow-lg ${
+                      selectedCategory === category.id
+                        ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md shadow-green-500/20'
+                        : 'bg-white/90 backdrop-blur-sm text-gray-600 border border-gray-200 hover:border-green-300 hover:bg-green-50'
+                      }`}
+                  >
+                    {category.name}
+                  </motion.button>
+                ))}
+              </motion.div>
+            </motion.div>
+
+            {/* Products Grid */}
+            <motion.div 
+              layout
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+            >
+              <AnimatePresence mode="wait">
+                {loading ? (
+                  // Loading skeleton
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm p-4 space-y-4"
+                    >
+                      <div className="w-full h-48 bg-gray-200 rounded-lg" />
+                      <div className="h-4 bg-gray-200 rounded w-3/4" />
+                      <div className="h-4 bg-gray-200 rounded w-1/2" />
+                    </motion.div>
+                  ))
+                ) : filteredProducts.length > 0 ? (
+                  filteredProducts.map((product) => (
+                    <motion.div
+                      key={product.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <ProductCard
+                        product={product}
+                        onAddToCart={handleAddToCart}
+                      />
+                    </motion.div>
+                  ))
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="col-span-full text-center py-12"
+                  >
+                    <Sparkles className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No hay productos</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      No se encontraron productos que coincidan con tu búsqueda.
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          </div>
         </div>
       </main>
 

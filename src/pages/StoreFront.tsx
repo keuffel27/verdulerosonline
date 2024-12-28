@@ -11,6 +11,7 @@ import { BasicProductCard } from '../components/store/products/BasicProductCard'
 import { isStoreOpen } from '../services/schedule';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { OptimizedImage } from '../components/ui/OptimizedImage';
 
 export const StoreFront: React.FC = () => {
   const { storeId } = useParams();
@@ -186,6 +187,12 @@ export const StoreFront: React.FC = () => {
       {/* Header Section */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          {/* Mensaje de prueba */}
+          <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-4">
+            <p className="font-bold">¡Soy la IA y estoy aquí! 🤖</p>
+            <p>Este es el componente que muestra las tiendas públicas de los usuarios</p>
+          </div>
+
           <div className="flex flex-col space-y-4">
             {/* Store Info */}
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
@@ -261,9 +268,9 @@ export const StoreFront: React.FC = () => {
       {/* Banner Section */}
       {store?.store_appearance?.banner_url && (
         <div className="relative w-full h-40 sm:h-48 md:h-56 lg:h-64 overflow-hidden">
-          <img
+          <OptimizedImage
             src={store.store_appearance.banner_url}
-            alt="Banner"
+            alt={`Banner de ${store.name}`}
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />

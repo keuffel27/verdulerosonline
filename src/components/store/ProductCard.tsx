@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Product, Presentation } from '../../types/store';
 import { useCart } from '../../stores/cart';
 import { ShoppingCart, Plus } from 'lucide-react';
+import { OptimizedImage } from '../ui/OptimizedImage';
 
 interface ProductCardProps {
   product: Product;
@@ -29,10 +30,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       {/* Product Image */}
       {product.image_url && (
         <div className="aspect-square overflow-hidden bg-gray-100">
-          <img
-            src={product.image_url}
+          <OptimizedImage
+            src={product.image_url || '/default-product.jpg'}
             alt={product.name}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
           />
         </div>
       )}

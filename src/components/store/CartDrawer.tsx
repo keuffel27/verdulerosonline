@@ -3,6 +3,7 @@ import { X, ShoppingBag, Plus, Minus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatCurrency } from '../../utils/format';
 import { useCart } from '../../hooks/useCart';
+import { OptimizedImage } from '../ui/OptimizedImage';
 
 interface Props {
   isOpen: boolean;
@@ -65,10 +66,10 @@ export function CartDrawer({ isOpen, onClose }: Props) {
                          hover:border-green-200 transition-colors"
               >
                 {item.product.image_url && (
-                  <img
-                    src={item.product.image_url}
+                  <OptimizedImage
+                    src={item.product.image_url || '/default-product.jpg'}
                     alt={item.product.name}
-                    className="w-16 h-16 rounded-md object-cover mr-3"
+                    className="w-16 h-16 object-cover rounded-md"
                   />
                 )}
                 <div className="flex-1 min-w-0">

@@ -1,19 +1,28 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './stores/useAuthStore';
-import Landing from './pages/Landing';
-import { Login } from './pages/auth/Login';
-import { Register } from './pages/auth/Register';
-import StorePanel from './pages/store/StorePanel';
-import StoreProducts from './pages/store/panels/StoreProducts';
-import StoreCategories from './pages/store/panels/StoreCategories';
-import StoreSocialMedia from './pages/store/panels/StoreSocialMedia';
-import StoreSettings from './pages/store/panels/StoreSettings';
-import StoreAppearance from './pages/store/panels/StoreAppearance';
-import StoreSchedule from './pages/store/panels/StoreSchedule';
-import StorePage from './pages/store/StorePage';
 import { CartProvider } from './context/CartContext';
+
+// Componente de carga
+const LoadingSpinner = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500" />
+  </div>
+);
+
+// Lazy loading de componentes
+const Landing = lazy(() => import('./pages/Landing').then(module => ({ default: module.default })));
+const Login = lazy(() => import('./pages/auth/Login').then(module => ({ default: module.Login })));
+const Register = lazy(() => import('./pages/auth/Register').then(module => ({ default: module.Register })));
+const StorePanel = lazy(() => import('./pages/store/StorePanel').then(module => ({ default: module.default })));
+const StoreProducts = lazy(() => import('./pages/store/panels/StoreProducts').then(module => ({ default: module.default })));
+const StoreCategories = lazy(() => import('./pages/store/panels/StoreCategories').then(module => ({ default: module.default })));
+const StoreSocialMedia = lazy(() => import('./pages/store/panels/StoreSocialMedia').then(module => ({ default: module.default })));
+const StoreSettings = lazy(() => import('./pages/store/panels/StoreSettings').then(module => ({ default: module.default })));
+const StoreAppearance = lazy(() => import('./pages/store/panels/StoreAppearance').then(module => ({ default: module.default })));
+const StoreSchedule = lazy(() => import('./pages/store/panels/StoreSchedule').then(module => ({ default: module.default })));
+const StorePage = lazy(() => import('./pages/store/StorePage').then(module => ({ default: module.default })));
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -46,15 +55,11 @@ function App() {
   }, [checkAuth]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500" />
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
-    <CartProvider>
+    <>
       <Toaster 
         position="top-right"
         toastOptions={{
@@ -79,43 +84,47 @@ function App() {
           },
         }}
       />
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route
-          path="/auth/login"
-          element={
-            <AuthRoute>
-              <Login />
-            </AuthRoute>
-          }
-        />
-        <Route
-          path="/auth/register"
-          element={
-            <AuthRoute>
-              <Register />
-            </AuthRoute>
-          }
-        />
-        <Route path="/store/:storeId" element={<StorePage />} />
-        <Route
-          path="/store/:storeId/panel/*"
-          element={
-            <ProtectedRoute>
-              <StorePanel />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="products" element={<StoreProducts />} />
-          <Route path="categories" element={<StoreCategories />} />
-          <Route path="social" element={<StoreSocialMedia />} />
-          <Route path="settings" element={<StoreSettings />} />
-          <Route path="appearance" element={<StoreAppearance />} />
-          <Route path="schedule" element={<StoreSchedule />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </CartProvider>
+      <CartProvider>
+        <Suspense fallback={<LoadingSpinner />}>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route
+              path="/auth/login"
+              element={
+                <AuthRoute>
+                  <Login />
+                </AuthRoute>
+              }
+            />
+            <Route
+              path="/auth/register"
+              element={
+                <AuthRoute>
+                  <Register />
+                </AuthRoute>
+              }
+            />
+            <Route path="/store/:storeId" element={<StorePage />} />
+            <Route
+              path="/store/:storeId/panel/*"
+              element={
+                <ProtectedRoute>
+                  <StorePanel />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="products" element={<StoreProducts />} />
+              <Route path="categories" element={<StoreCategories />} />
+              <Route path="social" element={<StoreSocialMedia />} />
+              <Route path="settings" element={<StoreSettings />} />
+              <Route path="appearance" element={<StoreAppearance />} />
+              <Route path="schedule" element={<StoreSchedule />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </CartProvider>
+    </>
   );
 }
 

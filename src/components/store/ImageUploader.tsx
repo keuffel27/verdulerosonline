@@ -1,28 +1,21 @@
 import React, { useState } from 'react';
-import { uploadImage } from '../../services/imageUpload';
 import { toast } from 'react-hot-toast';
-import { Upload, Image as ImageIcon } from 'lucide-react';
+import { uploadImage } from '../../services/imageUpload';
+import { OptimizedImage } from '../ui/OptimizedImage';
 
 interface ImageUploaderProps {
-  type: 'logo' | 'banner';
-  storeId: string;
-  currentImageUrl?: string;
-  onImageUpdate: (newImageUrl: string) => void;
+  currentImageUrl?: string | null;
+  onImageUploaded: (url: string) => void;
+  className?: string;
 }
 
 export const ImageUploader: React.FC<ImageUploaderProps> = ({
-  type,
-  storeId,
   currentImageUrl,
-  onImageUpdate
+  onImageUploaded,
+  className = ""
 }) => {
   const [uploading, setUploading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(currentImageUrl || null);
-
-  const isLogo = type === 'logo';
-  const containerClass = isLogo 
-    ? "w-32 h-32" 
-    : "w-full h-48";
 
   const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -41,67 +34,76 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
       setUploading(true);
 
-      // Subir la imagen a ImgBB
-      const { url: newImageUrl } = await uploadImage(file);
+      // Usar el servicio de ImgBB para subir la imagen
+      const response = await uploadImage(file);
       
-      // Actualizar estado local
-      setImageUrl(newImageUrl);
-      onImageUpdate(newImageUrl);
+      // Actualizar la URL de la imagen
+      setImageUrl(response.url);
       
-      toast.success(`${isLogo ? 'Logo' : 'Banner'} actualizado con éxito`);
+      // Notificar al componente padre
+      onImageUploaded(response.url);
 
+      toast.success('Imagen subida correctamente');
     } catch (error) {
       console.error('Error al subir la imagen:', error);
-      toast.error(`Error al actualizar el ${isLogo ? 'logo' : 'banner'}`);
-      setImageUrl(currentImageUrl || null);
+      toast.error('Error al subir la imagen');
     } finally {
       setUploading(false);
-      if (event.target) {
-        event.target.value = '';
-      }
     }
   };
 
   return (
-    <div className="flex flex-col items-center space-y-4">
-      {/* Preview de la imagen */}
-      <div className={`relative ${containerClass} rounded-lg bg-gray-50 flex items-center justify-center overflow-hidden border-2 border-gray-200`}>
+    <div className={`relative group ${className}`}>
+      <input
+        type="file"
+        onChange={handleImageChange}
+        accept="image/*"
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+        disabled={uploading}
+      />
+      
+      <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden">
         {imageUrl ? (
-          <img
-            key={imageUrl}
+          <OptimizedImage
             src={imageUrl}
-            alt={isLogo ? "Logo de la tienda" : "Banner de la tienda"}
-            className={`${isLogo ? 'object-contain' : 'object-cover'} w-full h-full`}
-            onError={() => setImageUrl(null)}
+            alt="Imagen cargada"
+            className="w-full h-full object-cover"
           />
         ) : (
-          <ImageIcon className="w-12 h-12 text-gray-400" />
-        )}
-        {uploading && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+          <div className="flex flex-col items-center justify-center h-full">
+            <svg
+              className="w-12 h-12 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            <span className="mt-2 text-sm text-gray-500">
+              {uploading ? 'Subiendo...' : 'Haz clic para subir una imagen'}
+            </span>
           </div>
         )}
+        
+        {/* Overlay de carga */}
+        {uploading && (
+          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        )}
+        
+        {/* Overlay de hover */}
+        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity flex items-center justify-center">
+          <div className="text-white opacity-0 group-hover:opacity-100 transition-opacity">
+            {imageUrl ? 'Cambiar imagen' : 'Subir imagen'}
+          </div>
+        </div>
       </div>
-
-      {/* Botón de carga */}
-      <label className={`cursor-pointer inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-        <input
-          type="file"
-          className="hidden"
-          accept="image/*"
-          onChange={handleImageChange}
-          disabled={uploading}
-        />
-        <Upload className="w-4 h-4 mr-2" />
-        {uploading ? 'Subiendo...' : `Cambiar ${isLogo ? 'Logo' : 'Banner'}`}
-      </label>
-
-      <p className="text-sm text-gray-500 text-center">
-        Formatos: PNG, JPG, WebP
-        <br />
-        Tamaño máximo: 5MB
-      </p>
     </div>
   );
 };

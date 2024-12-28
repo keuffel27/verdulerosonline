@@ -56,44 +56,49 @@ export function BasicProductCard({ product }: Props) {
   };
 
   return (
-    <div className="group bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
-      {/* Imagen con overlay al hacer hover */}
-      <div className="relative h-48 bg-gray-50">
-        <img
-          src={product.image_url || noImage}
-          alt={product.name}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-      </div>
+    <div className="relative group">
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-green-600 to-emerald-600 rounded-2xl blur opacity-0 group-hover:opacity-30 transition-all duration-500"></div>
+      <div className="relative bg-white/90 backdrop-blur-sm rounded-xl shadow-lg hover:shadow-xl transition-all duration-500 overflow-hidden">
+        {/* Imagen del producto */}
+        <div className="relative h-48 overflow-hidden">
+          <img
+            src={product.image_url || noImage}
+            alt={product.name}
+            className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        </div>
 
-      {/* Contenido */}
-      <div className="p-4">
-        <h3 className="font-semibold text-lg text-gray-900 mb-1">{product.name}</h3>
-        
-        {product.description && (
-          <p className="text-gray-600 text-sm mb-4 line-clamp-2">{product.description}</p>
-        )}
+        {/* Contenido */}
+        <div className="p-4">
+          <h3 className="text-lg font-semibold text-gray-800 mb-2 group-hover:text-green-600 transition-colors duration-300">
+            {product.name}
+          </h3>
 
-        {/* Presentaciones */}
-        <div className="space-y-2 mt-auto">
-          {activePresentations.map((presentation) => (
-            <button
-              key={presentation.id}
-              data-presentation-id={presentation.id}
-              onClick={() => handleAddToCart(presentation.id)}
-              className="w-full px-4 py-2.5 rounded-lg border border-green-500/30 
-                       bg-white text-green-700 hover:bg-green-50 active:bg-green-100
-                       transition-all duration-200 flex justify-between items-center
-                       hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
-            >
-              <div className="flex items-center space-x-2">
-                <ShoppingCart className="w-4 h-4 text-green-600" />
-                <span>{formatPresentation(presentation.quantity, presentation.unit)}</span>
-              </div>
-              <span className="font-medium">{formatCurrency(presentation.price)}</span>
-            </button>
-          ))}
+          {/* Presentaciones */}
+          <div className="space-y-2">
+            {activePresentations.map((presentation) => (
+              <button
+                key={presentation.id}
+                data-presentation-id={presentation.id}
+                onClick={() => handleAddToCart(presentation.id)}
+                className="w-full flex items-center justify-between p-2 rounded-lg border border-gray-200 
+                         hover:border-green-500 hover:shadow-md transition-all duration-300
+                         focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50
+                         active:scale-95"
+              >
+                <span className="text-sm text-gray-600">
+                  {formatPresentation(presentation.quantity, presentation.unit)}
+                </span>
+                <div className="flex items-center space-x-2">
+                  <span className="font-medium text-green-600">
+                    {formatCurrency(presentation.price)}
+                  </span>
+                  <ShoppingCart className="w-4 h-4 text-green-600" />
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Category } from '../../../types/store';
 import { useNavigate } from 'react-router-dom';
+import { OptimizedImage } from '../../ui/OptimizedImage';
 
 interface Props {
   categories: Category[];
@@ -65,8 +66,8 @@ export const CategoryGrid: React.FC<Props> = ({
           {/* Fondo con imagen o gradiente */}
           {category.image_url ? (
             <div className="absolute inset-0">
-              <img
-                src={category.image_url}
+              <OptimizedImage
+                src={category.image_url || '/default-category.jpg'}
                 alt={category.name}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
               />
